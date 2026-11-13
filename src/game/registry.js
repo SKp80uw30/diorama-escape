@@ -4,13 +4,16 @@
  *
  * Level contract (see levels/tennis/level.js):
  *   { id, title, hint, slab:{hx,hz}, tall, puzzle, build(ctx) -> { update?, fx? } }
+ * fx handlers get (payload, state, event); the built-in fx are 'consume' and 'hint'.
  */
 import tennis from '../levels/tennis/level.js';
+import museum from '../levels/museum/level.js';
+import jungle from '../levels/jungle/level.js';
 
 export const LEVELS = [
   tennis,
-  { id: 'museum', title: 'The Ancient Museum' },
-  { id: 'jungle', title: 'The Jungle Temple' },
+  museum,
+  jungle,
 ];
 
 export const levelById = (id) => LEVELS.find((l) => l.id === id);

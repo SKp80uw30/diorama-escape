@@ -74,5 +74,64 @@ export function createKit({ group, physics }) {
     solid(hx * 2 + 2, H, 1, 0, H / 2, -hz - 0.5);
   }
 
-  return { THREE, group, physics, occluders, mat, box, cyl, solid, item, ball, slab, zone: physics.addZone };
+  /** A bare mesh (never an occluder, never a collider): for item parts and moving props. */
+  function part(geometry, color, x = 0, y = 0, z = 0, parent = group, opts) {
+    const mesh = new THREE.Mesh(geometry, mat(color, opts));
+    mesh.position.set(x, y, z);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    parent.add(mesh);
+    return mesh;
+  }
+
+  /** Take scenery out of the level: mesh, its collider and its line-of-sight blocking. */
+  function remove(obj) {
+    obj.traverse((o) => {
+      const i = occluders.indexOf(o);
+      if (i >= 0) occluders.splice(i, 1);
+      if (o.userData.body) physics.removeStatic(o.userData.body);
+    });
+    obj.parent?.remove(obj);
+  }
+
+  // --- tiny tween runner: tween(seconds, step(eased, linear), done, delay) ------
+  const tweens = [];
+  function tween(dur, step, done, delay = 0) { tweens.push({ t: -delay, dur: dur || 1e-6, step, done }); }
+  function tick(dt) {
+    for (let i = tweens.length - 1; i >= 0; i--) {
+      const tw = tweens[i];
+      tw.t += dt;
+      if (tw.t < 0) continue;
+      const k = Math.min(1, tw.t / tw.dur);
+      tw.step?.(1 - Math.pow(1 - k, 3), k);
+      if (k >= 1) { tweens.splice(i, 1); tw.done?.(); }
+    }
+  }
+
+  /**
+   * A barred cage standing on a surface at height y, holding something the
+   * player can see but not take. open(done) retracts the bars.
+   */
+  function cage(x, y, z, w, h, color) {
+    const g = new THREE.Group();
+    g.position.set(x, y, z);
+    group.add(g);
+    const e = w / 2 - 0.04;
+    for (let i = 0; i < 4; i++) {
+      for (const t of [-1, -0.33, 0.33, 1]) {
+        const [bx, bz] = i === 0 ? [t * e, e] : i === 1 ? [t * e, -e] : i === 2 ? [e, t * e] : [-e, t * e];
+        part(new THREE.BoxGeometry(0.05, h, 0.05), color, bx, h / 2, bz, g);
+      }
+    }
+    part(new THREE.BoxGeometry(w, 0.06, w), color, 0, h, 0, g);
+    const body = solid(w, h + 0.06, w, x, y + h / 2, z);
+    return {
+      group: g,
+      open(done) {
+        tween(0.9, (e2) => { g.scale.y = 1 - 0.98 * e2; }, () => { remove(g); physics.removeStatic(body); done?.(); }, 0.3);
+      },
+    };
+  }
+
+  return { THREE, group, physics, occluders, mat, box, cyl, solid, item, ball, slab, part, remove, tween, tick, cage, zone: physics.addZone };
 }

@@ -84,7 +84,8 @@ function emit(event) {
   c.state = r.state;
   for (const fx of r.effects) {
     if (fx.name === 'consume') c.physics.removeItem(event.item);
-    else c.built.fx?.[fx.name]?.(fx.payload, c.state);
+    else if (fx.name === 'hint') hud.setHint(fx.payload);
+    else c.built.fx?.[fx.name]?.(fx.payload, c.state, event);
   }
   if (c.state.won && !wasWon) {
     const next = nextOf(c.level.id);
@@ -99,6 +100,7 @@ function tick(dt) {
   c.t += dt;
   c.grab.update();
   c.physics.step(dt, emit);
+  c.kit.tick(dt);
   c.built.update?.(dt, c.t, c.state);
 }
 

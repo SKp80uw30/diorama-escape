@@ -9,7 +9,7 @@ npm install
 npm run build        # bundles to dist/ (add -- --minify for release)
 npm run serve        # http://127.0.0.1:5300/
 npm test             # puzzle rules + solver: proves every level can be finished
-npm run qa           # plays level 1 in a real browser with pointer drags, saves qa/shots/
+npm run qa           # plays every level in a real browser with pointer drags, saves qa/shots/
 ```
 
 `dist/diorama-escape.html` is the whole game in one file.
@@ -39,11 +39,13 @@ A puzzle is a list of rules. Physical events (`an item entered a zone`) go in; s
 { when: { gte: ['balls', 3] },              do: [['set', 'fired'], ['fx', 'fire']] },
 ```
 
+Two effects are built in: `consume` removes the item that triggered the rule and `['fx', 'hint', 'text']` changes the hint line. Every other effect name calls `fx.<name>(payload, state, event)` in the level's scene. The kit also gives scenes `tween`, `cage`, `part` and `remove` for moving props.
+
 ## Levels
 
 1. **Centre Court** (playable): load three balls into the ball machine; it knocks the gate key off the floodlight.
-2. **The Ancient Museum** (planned)
-3. **The Jungle Temple** (planned)
+2. **The Ancient Museum** (playable): each relic belongs on the plinth of its colour. Two relics open the display case, the scarab opens the sarcophagus, and the sun disc inside opens the door.
+3. **The Jungle Temple** (playable): the stone face needs both jade eyes. Light the torch at the campfire and burn the vines for one; put the carved stone on the pressure plate to drop the cage for the other.
 
 ## Credits
 
