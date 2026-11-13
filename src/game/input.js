@@ -1,4 +1,8 @@
 /**
+ * LOCKED: this navigation was tested and approved by the owner. Do not change
+ * this file, grab.js or the input wiring in main.js unless the owner explicitly
+ * asks for a navigation change (see CLAUDE.md).
+ *
  * The one place that acts on fingers and the mouse. The camera library's own
  * pointer handling is switched off (see main.js), so two handlers can never
  * disagree about what is going on.

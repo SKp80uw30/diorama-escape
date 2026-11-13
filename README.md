@@ -19,6 +19,8 @@ node qa/touchfuzz.mjs # random multi-finger touch sequences; fails if a finger i
 
 Drag empty space with one finger to turn the diorama, drag with two fingers to slide the view up, down, left or right, and pinch to zoom. With a mouse: left-drag turns, right-drag slides, the wheel zooms. `R` resets the view. Press on a loose object to pick it up, drag to carry it, release to drop it; release while moving to throw it.
 
+The navigation is approved as final: see `CLAUDE.md` before touching `input.js` or `grab.js`.
+
 ## Layout
 
 | Folder | What it is |
