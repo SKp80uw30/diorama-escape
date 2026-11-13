@@ -9,11 +9,17 @@
 import tennis from '../levels/tennis/level.js';
 import museum from '../levels/museum/level.js';
 import jungle from '../levels/jungle/level.js';
+import pirate from '../levels/pirate/level.js';
+import party from '../levels/party/level.js';
+import dino from '../levels/dino/level.js';
 
 export const LEVELS = [
   tennis,
   museum,
   jungle,
+  pirate,
+  party,
+  dino,
 ];
 
 export const levelById = (id) => LEVELS.find((l) => l.id === id);

@@ -133,5 +133,18 @@ export function createKit({ group, physics }) {
     };
   }
 
-  return { THREE, group, physics, occluders, mat, box, cyl, solid, item, ball, slab, part, remove, tween, tick, cage, zone: physics.addZone };
+  /** A puff of small bits flying out from a point (confetti, splinters), then gone. */
+  function burst(x, y, z, colors, count = 14, reach = 1.4) {
+    for (let i = 0; i < count; i++) {
+      const a = (i / count) * Math.PI * 2 + i * 0.7, r = reach * (0.5 + ((i * 37) % 10) / 20), rise = 0.6 + ((i * 53) % 10) / 12;
+      const bit = part(new THREE.BoxGeometry(0.12, 0.12, 0.04), colors[i % colors.length], x, y, z);
+      bit.castShadow = false;
+      tween(0.7 + (i % 4) * 0.08, (e, k) => {
+        bit.position.set(x + Math.cos(a) * r * e, y + rise * Math.sin(k * Math.PI) - 1.2 * k * k, z + Math.sin(a) * r * e);
+        bit.rotation.set(k * 6 + i, k * 4, 0);
+      }, () => remove(bit));
+    }
+  }
+
+  return { THREE, group, physics, occluders, mat, box, cyl, solid, item, ball, slab, part, remove, tween, tick, cage, burst, zone: physics.addZone };
 }

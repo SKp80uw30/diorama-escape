@@ -199,7 +199,122 @@ try {
   await put('eye1', 'altar');
   s = await state();
   check(s.won && s.flags.mouthOpen, 'jungle: both eyes on the altar open the mouth and win');
-  await finish('jungle');
+  await finish('jungle', 'pirate');
+
+  /** from high above, where nothing hides a loose item wherever it came to rest */
+  const fromAbove = () => lookFrom(45, 1.25);
+  const hero = () => lookFrom(45, 0.576);
+
+  // --- 4. The Pirate Ship ---------------------------------------------------------------
+  check((await levelId()) === 'pirate', 'pirate: the win card leads onto the ship');
+  await shot('pirate-start');
+  check((await items('key')).length === 0 && (await items('wheel')).length === 0, 'pirate: key and wheel are out of reach at the start');
+  await put('ball', 'cannon');
+  s = await state();
+  check(s.counters.loaded === 1 && !s.flags.fired, 'pirate: the ball alone does not fire the cannon');
+  await put('keg', 'cannon');
+  check((await state()).counters.loaded === 1, 'pirate: the keg cannot be grabbed through the crates');
+  await lookFrom(-90, 0.7);
+  await shot('pirate-behind');
+  await put('keg', 'cannon');
+  check((await state()).flags.fired, 'pirate: with ball and powder the cannon fires');
+  await hero();
+  await adv(3);
+  await shot('pirate-fired');
+  const pkey = await items('key');
+  check(pkey.length === 1 && pkey[0][1] > 0.9, `pirate: the key landed on the deck (${JSON.stringify(pkey[0]?.map((n) => +n.toFixed(2)))})`);
+  await fromAbove();
+  await put('key', 'chest');
+  check((await state()).flags.chestOpen, 'pirate: the key opens the chest');
+  await adv(2.5);
+  check(!(await state()).won, 'pirate: not won before the wheel is on the helm');
+  await put('wheel', 'helm');
+  check((await state()).won, 'pirate: the wheel on the helm sets sail and wins');
+  await hero();
+  await finish('pirate', 'party');
+
+  // --- 5. The Birthday Party --------------------------------------------------------------
+  check((await levelId()) === 'party', 'party: the win card leads to the party');
+  await shot('party-start');
+  const balloons = async () => (await items('balloon')).sort((a, b) => a[1] - b[1]);
+  let bs = await balloons();
+  check(bs.length === 3 && bs[0][1] < 1.2 && bs[2][1] > 3, `party: one balloon is under the table and two are at the ceiling (${bs.map((b) => b[1].toFixed(1))})`);
+  const pin = await over('pin');
+  await carry(bs[0], pin);
+  check(!(await state()).counters.pops, 'party: the balloon under the table cannot be grabbed from above');
+  await hero();
+  // a balloon that is let go anywhere else floats back up and can be caught again
+  bs = await balloons();
+  await carry(bs[2], [-2, 2.8, 3.5]);
+  await adv(2);
+  bs = await balloons();
+  check(bs.length === 3 && bs[2][1] > 3 && !(await state()).counters.pops, 'party: a balloon let go away from the cactus floats back up to the ceiling');
+  await carry(bs[2], pin);
+  check((await state()).counters.pops === 1 && (await items('candle')).length === 1, 'party: a balloon let go over the cactus pops and drops a candle');
+  bs = await balloons();
+  await carry(bs[1], pin);
+  check((await state()).counters.pops === 2, 'party: the second ceiling balloon pops');
+  // the last one: tilt the view low to reach under the table, then carry it out
+  await lookFrom(45, 0.12);
+  await shot('party-low');
+  bs = await balloons();
+  const [bx, by] = await screen(bs[0]);
+  await page.mouse.move(bx, by); await page.mouse.down();
+  await adv(0.2);
+  await hero();
+  const [qx, qy] = await screen(pin);
+  await page.mouse.move(qx, qy, { steps: 10 });
+  await adv(1.6);
+  await page.mouse.up();
+  await adv(1.5);
+  check((await state()).counters.pops === 3, 'party: from a low angle the trapped balloon can be pulled out and popped');
+  await adv(1.5);
+  check((await items('candle')).length === 3, 'party: three candles are loose');
+  for (let i = 1; i <= 3; i++) {
+    await fromAbove();
+    await put('candle', 'cake');
+    check((await state()).counters.candles === i, `party: candle ${i} is on the cake`);
+  }
+  check((await state()).flags.lit, 'party: three candles light the cake');
+  await adv(3);
+  await hero();
+  await shot('party-lit');
+  await fromAbove();
+  check(await put('key', 'door'), 'party: the present gave up its key');
+  check((await state()).won, 'party: the key opens the door and wins');
+  await hero();
+  await finish('party', 'dino');
+
+  // --- 6. Dinosaur Valley -------------------------------------------------------------------
+  check((await levelId()) === 'dino', 'dino: the win card leads to the valley');
+  await shot('dino-start');
+  check((await items('egg')).length === 2 && (await items('egg3')).length === 0 && (await items('bone')).length === 0, 'dino: two eggs are loose; the third egg and the bone are not');
+  const eggs = async () => (await items('egg')).sort((a, b) => a[2] - b[2]);
+  await carry((await eggs())[0], await over('nest'));
+  check((await state()).counters.eggs === 1, 'dino: the egg in plain sight goes in the nest');
+  await put('egg', 'nest');
+  check((await state()).counters.eggs === 1, 'dino: the egg behind the boulder cannot be grabbed from the front');
+  await lookFrom(0);
+  await put('egg', 'nest');
+  check((await state()).counters.eggs === 2, 'dino: from the side the hidden egg is reachable');
+  await hero();
+  await put('fern', 'tree');
+  check((await state()).flags.lured, 'dino: leaves at the tall tree lure the long-neck');
+  await adv(3.5);
+  await shot('dino-lured');
+  await fromAbove();
+  check(await put('egg3', 'nest'), 'dino: the egg it was standing over is loose');
+  s = await state();
+  check(s.counters.eggs === 3 && s.flags.swooped, 'dino: three eggs bring the pterodactyl down');
+  await adv(3.5);
+  await hero();
+  await shot('dino-swooped');
+  check(!(await state()).won, 'dino: not won before the T-rex is fed');
+  await fromAbove();
+  check(await put('bone', 'rexRock'), 'dino: the bone was dropped');
+  check((await state()).won, 'dino: the bone on the flat rock lures the T-rex away and wins');
+  await hero();
+  await finish('dino');
   check(errors.length === 0, `no console errors ${errors.join(' | ')}`);
 
   // real touch gestures (through the browser's touch input) on a phone-sized page
@@ -234,9 +349,9 @@ try {
   }
 
   // phone portrait framing of every level (a new page has no saved progress, so unlock them first)
-  for (const id of ['tennis', 'museum', 'jungle']) {
+  for (const id of ['tennis', 'museum', 'jungle', 'pirate', 'party', 'dino']) {
     const phone = await browser.newPage({ viewport: { width: 390, height: 844 } });
-    await phone.addInitScript(() => localStorage.setItem('diorama-escape:v1', JSON.stringify({ unlocked: ['tennis', 'museum', 'jungle'], solved: [] })));
+    await phone.addInitScript(() => localStorage.setItem('diorama-escape:v1', JSON.stringify({ unlocked: ['tennis', 'museum', 'jungle', 'pirate', 'party', 'dino'], solved: [] })));
     await phone.goto(`http://127.0.0.1:${PORT}/?level=${id}`, { waitUntil: 'commit' });
     await phone.waitForFunction(() => window.__dioramaReady);
     await phone.evaluate(() => window.__diorama.advance(1));

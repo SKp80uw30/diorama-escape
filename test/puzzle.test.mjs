@@ -4,8 +4,11 @@ import { createState, applyEvent, solve } from '../src/game/puzzle.js';
 import tennis from '../src/levels/tennis/puzzle.js';
 import museum from '../src/levels/museum/puzzle.js';
 import jungle from '../src/levels/jungle/puzzle.js';
+import pirate from '../src/levels/pirate/puzzle.js';
+import party from '../src/levels/party/puzzle.js';
+import dino from '../src/levels/dino/puzzle.js';
 
-const LEVEL_PUZZLES = { tennis, museum, jungle };
+const LEVEL_PUZZLES = { tennis, museum, jungle, pirate, party, dino };
 const enter = (zone, tag) => ({ type: 'enter', zone, tag });
 const play = (puzzle, moves) => moves.reduce((s, [zone, tag]) => applyEvent(puzzle, s, enter(zone, tag)).state, createState(puzzle));
 
@@ -77,4 +80,43 @@ test('jungle: the mouth opens only with both eyes, and the plate works once', ()
   s = play(jungle, [['altar', 'eye2']]);
   assert.ok(!s.won && s.counters.eyes === 1);
   assert.ok(play(jungle, [['altar', 'eye2'], ['altar', 'eye1']]).won);
+});
+
+test('pirate: the cannon needs both the ball and the powder, in either order', () => {
+  assert.ok(!play(pirate, [['cannon', 'ball']]).flags.fired);
+  assert.ok(!play(pirate, [['cannon', 'keg']]).flags.fired);
+  assert.ok(play(pirate, [['cannon', 'ball'], ['cannon', 'keg']]).flags.fired);
+  assert.ok(play(pirate, [['cannon', 'keg'], ['cannon', 'ball']]).flags.fired);
+});
+
+test('pirate: key then wheel, and neither works early or in the wrong place', () => {
+  const s = createState(pirate);
+  assert.equal(applyEvent(pirate, s, enter('chest', 'key')).accepted, false);
+  assert.equal(applyEvent(pirate, s, enter('helm', 'wheel')).accepted, false);
+  const fired = play(pirate, [['cannon', 'ball'], ['cannon', 'keg']]);
+  assert.equal(applyEvent(pirate, fired, enter('helm', 'key')).accepted, false);
+  const open = applyEvent(pirate, fired, enter('chest', 'key')).state;
+  assert.ok(open.flags.chestOpen && !open.won);
+  assert.ok(applyEvent(pirate, open, enter('helm', 'wheel')).state.won);
+});
+
+test('party: three pops, three candles, then the key', () => {
+  let s = createState(party);
+  assert.equal(applyEvent(party, s, enter('door', 'key')).accepted, false);
+  assert.equal(applyEvent(party, s, enter('cake', 'balloon')).accepted, false);
+  s = play(party, [['pin', 'balloon'], ['cake', 'candle'], ['pin', 'balloon'], ['cake', 'candle']]);
+  assert.ok(!s.flags.lit && s.counters.candles === 2);
+  s = applyEvent(party, s, enter('cake', 'candle')).state;
+  assert.ok(s.flags.lit && !s.won);
+  assert.ok(applyEvent(party, s, enter('door', 'key')).state.won);
+});
+
+test('dino: the third egg needs the long-neck lured, and the T-rex only takes the bone after the swoop', () => {
+  let s = play(dino, [['nest', 'egg'], ['nest', 'egg']]);
+  assert.ok(!s.flags.swooped);
+  assert.equal(applyEvent(dino, s, enter('nest', 'egg3')).accepted, false);
+  assert.equal(applyEvent(dino, s, enter('rexRock', 'bone')).accepted, false);
+  s = play(dino, [['nest', 'egg'], ['nest', 'egg'], ['tree', 'fern'], ['nest', 'egg3']]);
+  assert.ok(s.flags.swooped && !s.won);
+  assert.ok(applyEvent(dino, s, enter('rexRock', 'bone')).state.won);
 });
