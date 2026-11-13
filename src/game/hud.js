@@ -13,8 +13,6 @@ const css = `
   #de-list button { text-align: left; border-color: transparent; }
   #de-win { position: fixed; left: 50%; bottom: max(28px, env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 6; background: #fff; border: 1px solid #2c231e; padding: 14px 16px; text-align: center; width: min(340px, calc(100vw - 28px)); }
   #de-win p { margin: 0 0 10px; }
-  /* on a narrow screen the card sits above the corner controls */
-  @media (max-width: 700px) { #de-win { bottom: calc(max(14px, env(safe-area-inset-bottom)) + 232px); } }
 `;
 
 export function createHud({ levels, onPick, onRestart }) {

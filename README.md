@@ -16,14 +16,14 @@ npm run qa           # plays every level in a real browser with pointer drags, s
 
 ## Controls
 
-The view has its own controls in the bottom corners, laid out for two thumbs. Left: the **move pad**; press towards an edge and the view slides that way while you hold. Right: the **turn orb**, a globe you roll to turn the diorama, with **+ / −** zoom above it (hold to keep zooming; pinch and scroll also zoom). Double-tap the pad or the orb to reset the view. Dragging on the diorama itself never moves the view. Press on a loose object to pick it up, drag to carry it, release to drop it; release while moving to throw it.
+Drag empty space with one finger to turn the diorama, drag with two fingers to slide the view up, down, left or right, and pinch to zoom. With a mouse: left-drag turns, right-drag slides, the wheel zooms. `R` resets the view. Press on a loose object to pick it up, drag to carry it, release to drop it; release while moving to throw it.
 
 ## Layout
 
 | Folder | What it is |
 |---|---|
 | `src/engine/` | Rendering modules from the [diorama kit](https://github.com/sloemo01/diorama) (MIT): hero camera, orbit, lighting, pixel post-pass. Only `palette.js` is changed. |
-| `src/game/` | The game layer: `physics.js` (cannon-es wrapper), `grab.js` (pick up / carry / throw), `puzzle.js` (declarative rules + solver), `kit.js` (level building helpers), `viewcontrols.js` (move pad, turn orb, zoom), `hud.js`, `save.js`, `registry.js`. |
+| `src/game/` | The game layer: `physics.js` (cannon-es wrapper), `grab.js` (pick up / carry / throw), `puzzle.js` (declarative rules + solver), `kit.js` (level building helpers), `hud.js`, `save.js`, `registry.js`. |
 | `src/levels/<id>/` | One folder per diorama: `puzzle.js` (rules as data), `scene.js` (geometry and behaviour), `level.js` (metadata). |
 
 ## Add a level

@@ -48,7 +48,6 @@ try {
     await page.mouse.move(x + dx, y + dy, { steps: 6 }); await page.mouse.up();
     await adv(0.1);
   };
-  const orbCentre = async () => { const b = await page.locator('#de-orb').boundingBox(); return [b.x + b.width / 2, b.y + b.height / 2]; };
   /** put the camera at an exact azimuth so checks do not depend on drag speed */
   const lookFrom = async (azDeg, el = 0.6) => {
     await page.evaluate(([azDeg, el]) => {
@@ -99,47 +98,33 @@ try {
   balls = await items('ball');
   await carry(balls[0], hopper);
   check((await state()).counters.balls === 2, 'tennis: hidden ball cannot be grabbed through the scoreboard');
-  // the view turns only from the orb, never by dragging on the diorama
-  let before = await camPos();
+  // view gestures: drag empty space to turn, right-drag (two fingers on touch) to slide, wheel (pinch) to zoom
+  const target = () => page.evaluate(() => window.__diorama.game.orbit.controls.target.toArray());
+  await page.locator('#stage').press('r'); // the refused grab above was a drag on empty space, so it turned the view
+  await adv(0.1);
+  const before = await camPos(), t0 = await target();
   await drag(400, 610, 200);
-  check(moved(before, await camPos()) < 1e-6, 'view: dragging empty space on the diorama does not turn it');
-  const [ox, oy] = await orbCentre();
-  await drag(ox, oy, -30, 10);
   let after = await camPos();
-  check(moved(before, after) > 1 && Math.abs(Math.hypot(...before) - Math.hypot(...after)) < 0.05, 'view: dragging the orb turns the diorama without zooming');
-  await page.mouse.dblclick(ox, oy);
+  check(moved(before, after) > 1 && Math.abs(Math.hypot(...before) - Math.hypot(...after)) < 0.05, 'view: dragging empty space turns the diorama without zooming');
+  check(moved(t0, await target()) < 1e-6, 'view: turning does not slide the view');
+  await page.mouse.move(400, 610); await page.mouse.down({ button: 'right' });
+  await page.mouse.move(460, 580, { steps: 6 }); await page.mouse.up({ button: 'right' });
   await adv(0.1);
-  check(moved(before, await camPos()) < 1e-6, 'view: double-tapping the orb resets the view');
-  await page.getByLabel('Zoom in').click();
-  await adv(0.1);
-  check(Math.hypot(...(await camPos())) < Math.hypot(...before) - 1, 'view: the + button zooms in');
-  await page.getByLabel('Zoom out').click();
+  check(moved(t0, await target()) > 0.3, 'view: right-dragging slides the view');
+  for (let i = 0; i < 8; i++) { // keep sliding the same way, staying inside the window
+    await page.mouse.move(400, 100); await page.mouse.down({ button: 'right' });
+    await page.mouse.move(400, 620, { steps: 6 }); await page.mouse.up({ button: 'right' });
+  }
+  await page.waitForTimeout(200);
+  const far = await target();
+  check(far[1] <= 4.8 + 1e-6 && Math.abs(far[0]) <= 8.6 + 1e-6 && Math.abs(far[2]) <= 5.6 + 1e-6, `view: the view stops at the edge of the diorama (${far.map((n) => +n.toFixed(1))})`);
   await page.mouse.move(500, 320); await page.mouse.wheel(0, -300);
   await adv(0.1);
-  check(Math.hypot(...(await camPos())) < Math.hypot(...before) - 0.5, 'view: scrolling over the diorama still zooms');
-  await page.mouse.dblclick(ox, oy);
+  check(await page.evaluate(() => window.__diorama.camera.position.distanceTo(window.__diorama.game.orbit.controls.target)) < Math.hypot(...before) - 0.5, 'view: scrolling zooms in');
+  await page.locator('#stage').press('r');
   await adv(0.1);
-  // move pad: a tap is one step, a hold keeps sliding, and the view cannot leave the diorama
-  const target = () => page.evaluate(() => window.__diorama.game.orbit.controls.target.toArray());
-  const pb = await page.locator('#de-pad').boundingBox();
-  const [px, py] = [pb.x + pb.width / 2, pb.y + pb.height / 2];
-  const t0 = await target();
-  await page.mouse.click(px + 34, py);
-  const t1 = await target();
-  check(moved(t0, t1) > 0.2 && moved(t0, t1) < 2, `view: tapping the pad's right arrow moves the view one step (${moved(t0, t1).toFixed(2)})`);
-  await page.mouse.move(px, py - 34); await page.mouse.down();
-  await page.waitForTimeout(500);
-  const t2 = await target();
-  await page.waitForTimeout(2500);
-  await page.mouse.up();
-  const t3 = await target();
-  check(t2[1] > t1[1] + 0.3, 'view: holding the pad upwards keeps sliding the view up');
-  check(t3[1] <= 4.8 + 1e-6 && Math.abs(t3[0]) <= 8.6 + 1e-6 && Math.abs(t3[2]) <= 5.6 + 1e-6, `view: the view stops at the edge of the diorama (${t3.map((n) => +n.toFixed(1))})`);
-  await shot('tennis-moved');
-  await page.mouse.dblclick(px, py);
-  await adv(0.1);
-  check(moved(before, await camPos()) < 1e-6 && moved(t0, await target()) < 1e-6, 'view: double-tapping the pad resets the view');
-  await shot('tennis-controls');
+  check(moved(before, await camPos()) < 1e-6 && moved(t0, await target()) < 1e-6, 'view: R resets the view');
+  check((await page.locator('#de-orb, #de-pad, #de-zoom').count()) === 0, 'view: no on-screen view controls remain');
   await lookFrom(250); // behind the scoreboard
   balls = await items('ball');
   await carry(balls[0], hopper);
@@ -216,6 +201,37 @@ try {
   check(s.won && s.flags.mouthOpen, 'jungle: both eyes on the altar open the mouth and win');
   await finish('jungle');
   check(errors.length === 0, `no console errors ${errors.join(' | ')}`);
+
+  // real touch gestures (through the browser's touch input) on a phone-sized page
+  {
+    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+    const tp = await ctx.newPage();
+    await tp.goto(`http://127.0.0.1:${PORT}/`);
+    await tp.waitForFunction(() => window.__dioramaReady);
+    await tp.evaluate(() => window.__diorama.advance(0.5));
+    const cdp = await ctx.newCDPSession(tp);
+    const view = () => tp.evaluate(() => { const d = window.__diorama, t = d.game.orbit.controls.target; return { cam: d.camera.position.toArray(), tgt: t.toArray(), dist: d.camera.position.distanceTo(t) }; });
+    const touch = (type, pts) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: pts.map(([x, y], id) => ({ x, y, id })) });
+    const gesture = async (from, to) => {
+      await touch('touchStart', from);
+      for (let i = 1; i <= 8; i++) { await touch('touchMove', from.map(([x, y], k) => [x + ((to[k][0] - x) * i) / 8, y + ((to[k][1] - y) * i) / 8])); await tp.waitForTimeout(16); }
+      await touch('touchEnd', []);
+      await tp.waitForTimeout(120);
+    };
+    const d3 = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+    const v0 = await view();
+    await gesture([[195, 700]], [[300, 700]]);
+    const v1 = await view();
+    check(d3(v0.cam, v1.cam) > 1 && d3(v0.tgt, v1.tgt) < 1e-6 && Math.abs(v0.dist - v1.dist) < 0.05, 'touch: one finger on empty space turns the diorama');
+    await gesture([[150, 700], [240, 700]], [[150, 640], [240, 640]]);
+    const v2 = await view();
+    check(d3(v1.tgt, v2.tgt) > 0.3 && Math.abs(v2.dist - v1.dist) < v1.dist * 0.05, `touch: two fingers dragged together slide the view (${d3(v1.tgt, v2.tgt).toFixed(2)})`);
+    await gesture([[170, 700], [220, 700]], [[90, 700], [300, 700]]);
+    const v3 = await view();
+    check(v3.dist < v2.dist * 0.9, `touch: pinching out zooms in (${v2.dist.toFixed(1)} -> ${v3.dist.toFixed(1)})`);
+    await tp.screenshot({ path: 'qa/shots/touch-after-gestures.png' });
+    await ctx.close();
+  }
 
   // phone portrait framing of every level (a new page has no saved progress, so unlock them first)
   for (const id of ['tennis', 'museum', 'jungle']) {

@@ -9,7 +9,6 @@ import { createKit } from './game/kit.js';
 import { createState, applyEvent } from './game/puzzle.js';
 import { loadProgress, markSolved } from './game/save.js';
 import { createHud } from './game/hud.js';
-import { createViewControls } from './game/viewcontrols.js';
 import { LEVELS, levelById, nextOf } from './game/registry.js';
 
 const canvas = document.getElementById('stage');
@@ -31,10 +30,6 @@ const hud = createHud({ levels: LEVELS, onPick: (id) => load(id), onRestart: () 
 
 /** Everything belonging to the level on screen; replaced wholesale on load(). */
 let current = null;
-// The view is moved, turned and zoomed with the corner controls, never by dragging on the diorama.
-const view = createViewControls({
-  getOrbit: () => current.orbit, getBounds: () => ({ ...current.level.slab, tall: current.level.tall }), camera, THREE,
-});
 
 function fitPoints({ slab, tall }) {
   const { hx, hz } = slab;
@@ -69,7 +64,10 @@ function load(id) {
   const orbit = createDioramaOrbit(camera, canvas, {
     target: CAMERA.target, minDistance: d * 0.45, maxDistance: d * 1.5, maxPolarAngle: Math.PI / 2 - 0.06,
   });
-  orbit.controls.enableRotate = false; // dragging the diorama is for objects; the corner controls move the view
+  // One finger on empty space turns the view, two fingers slide it, pinch zooms.
+  // (Mouse: left-drag turns, right-drag slides, wheel zooms.)
+  orbit.controls.enablePan = true;
+  orbit.controls.screenSpacePanning = true;
   const { hx, hz } = level.slab;
   const grab = createGrab({
     canvas, camera, physics, orbit,
@@ -101,6 +99,19 @@ function emit(event) {
   }
 }
 
+/** Sliding the view may not take the diorama off screen: the look-at point stays over the slab. */
+const clamped = new THREE.Vector3();
+function keepInView() {
+  const { controls } = current.orbit;
+  const { slab, tall } = current.level;
+  const t = controls.target;
+  clamped.set(Math.max(-slab.hx, Math.min(slab.hx, t.x)), Math.max(-0.5, Math.min(tall, t.y)), Math.max(-slab.hz, Math.min(slab.hz, t.z)));
+  if (clamped.equals(t)) return;
+  camera.position.add(clamped.clone().sub(t));
+  t.copy(clamped);
+  controls.update();
+}
+
 function tick(dt) {
   const c = current;
   c.t += dt;
@@ -115,7 +126,7 @@ function frame(now) {
   const dt = Math.min(0.05, (now - last) / 1000);
   last = now;
   tick(dt);
-  view.update(dt);
+  keepInView();
   post.render(scene, camera);
   requestAnimationFrame(frame);
 }
@@ -136,7 +147,6 @@ requestAnimationFrame(frame);
 window.__diorama = {
   THREE, scene, camera, renderer, post,
   get game() { return current; },
-  view,
   /** advance the simulation without waiting for real time */
   advance(seconds) { for (let i = 0; i < Math.round(seconds * 60); i++) tick(1 / 60); post.render(scene, camera); },
 };
