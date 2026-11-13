@@ -9,7 +9,7 @@ import { createKit } from './game/kit.js';
 import { createState, applyEvent } from './game/puzzle.js';
 import { loadProgress, markSolved } from './game/save.js';
 import { createHud } from './game/hud.js';
-import { createOrb } from './game/orb.js';
+import { createViewControls } from './game/viewcontrols.js';
 import { LEVELS, levelById, nextOf } from './game/registry.js';
 
 const canvas = document.getElementById('stage');
@@ -31,8 +31,10 @@ const hud = createHud({ levels: LEVELS, onPick: (id) => load(id), onRestart: () 
 
 /** Everything belonging to the level on screen; replaced wholesale on load(). */
 let current = null;
-// The view is turned only with the orb, never by dragging on the diorama.
-const orb = createOrb({ getOrbit: () => current.orbit, camera });
+// The view is moved, turned and zoomed with the corner controls, never by dragging on the diorama.
+const view = createViewControls({
+  getOrbit: () => current.orbit, getBounds: () => ({ ...current.level.slab, tall: current.level.tall }), camera, THREE,
+});
 
 function fitPoints({ slab, tall }) {
   const { hx, hz } = slab;
@@ -67,7 +69,7 @@ function load(id) {
   const orbit = createDioramaOrbit(camera, canvas, {
     target: CAMERA.target, minDistance: d * 0.45, maxDistance: d * 1.5, maxPolarAngle: Math.PI / 2 - 0.06,
   });
-  orbit.controls.enableRotate = false; // dragging the diorama is for objects; the orb turns the view
+  orbit.controls.enableRotate = false; // dragging the diorama is for objects; the corner controls move the view
   const { hx, hz } = level.slab;
   const grab = createGrab({
     canvas, camera, physics, orbit,
@@ -113,13 +115,14 @@ function frame(now) {
   const dt = Math.min(0.05, (now - last) / 1000);
   last = now;
   tick(dt);
-  orb.draw();
+  view.update(dt);
   post.render(scene, camera);
   requestAnimationFrame(frame);
 }
 
 window.addEventListener('resize', () => {
   if (!current) return;
+  current.orbit.controls.target.copy(CAMERA.target);
   updateCamera(camera, size(), current.points);
   current.orbit.controls.update();
 });
@@ -133,7 +136,7 @@ requestAnimationFrame(frame);
 window.__diorama = {
   THREE, scene, camera, renderer, post,
   get game() { return current; },
-  orb,
+  view,
   /** advance the simulation without waiting for real time */
   advance(seconds) { for (let i = 0; i < Math.round(seconds * 60); i++) tick(1 / 60); post.render(scene, camera); },
 };

@@ -101,7 +101,7 @@ try {
   check((await state()).counters.balls === 2, 'tennis: hidden ball cannot be grabbed through the scoreboard');
   // the view turns only from the orb, never by dragging on the diorama
   let before = await camPos();
-  await drag(100, 560, 200);
+  await drag(400, 610, 200);
   check(moved(before, await camPos()) < 1e-6, 'view: dragging empty space on the diorama does not turn it');
   const [ox, oy] = await orbCentre();
   await drag(ox, oy, -30, 10);
@@ -119,8 +119,28 @@ try {
   check(Math.hypot(...(await camPos())) < Math.hypot(...before) - 0.5, 'view: scrolling over the diorama still zooms');
   await page.mouse.dblclick(ox, oy);
   await adv(0.1);
-  await shot('tennis-orb');
-  await lookFrom(250);
+  // move pad: a tap is one step, a hold keeps sliding, and the view cannot leave the diorama
+  const target = () => page.evaluate(() => window.__diorama.game.orbit.controls.target.toArray());
+  const pb = await page.locator('#de-pad').boundingBox();
+  const [px, py] = [pb.x + pb.width / 2, pb.y + pb.height / 2];
+  const t0 = await target();
+  await page.mouse.click(px + 34, py);
+  const t1 = await target();
+  check(moved(t0, t1) > 0.2 && moved(t0, t1) < 2, `view: tapping the pad's right arrow moves the view one step (${moved(t0, t1).toFixed(2)})`);
+  await page.mouse.move(px, py - 34); await page.mouse.down();
+  await page.waitForTimeout(500);
+  const t2 = await target();
+  await page.waitForTimeout(2500);
+  await page.mouse.up();
+  const t3 = await target();
+  check(t2[1] > t1[1] + 0.3, 'view: holding the pad upwards keeps sliding the view up');
+  check(t3[1] <= 4.8 + 1e-6 && Math.abs(t3[0]) <= 8.6 + 1e-6 && Math.abs(t3[2]) <= 5.6 + 1e-6, `view: the view stops at the edge of the diorama (${t3.map((n) => +n.toFixed(1))})`);
+  await shot('tennis-moved');
+  await page.mouse.dblclick(px, py);
+  await adv(0.1);
+  check(moved(before, await camPos()) < 1e-6 && moved(t0, await target()) < 1e-6, 'view: double-tapping the pad resets the view');
+  await shot('tennis-controls');
+  await lookFrom(250); // behind the scoreboard
   balls = await items('ball');
   await carry(balls[0], hopper);
   let s = await state();
