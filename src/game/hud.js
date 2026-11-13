@@ -15,7 +15,7 @@ const css = `
   #de-win p { margin: 0 0 10px; }
 `;
 
-export const BUILD = 'build 7';
+export const BUILD = 'build 8';
 
 export function createHud({ levels, onPick, onRestart }) {
   const style = document.createElement('style');

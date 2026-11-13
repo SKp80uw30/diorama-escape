@@ -314,7 +314,56 @@ try {
   check(await put('bone', 'rexRock'), 'dino: the bone was dropped');
   check((await state()).won, 'dino: the bone on the flat rock lures the T-rex away and wins');
   await hero();
-  await finish('dino');
+  await finish('dino', 'concert');
+
+  // --- 7. The Concert -------------------------------------------------------------------------
+  check((await levelId()) === 'concert', 'concert: the win card leads to the concert');
+  await shot('concert-start');
+  const inside = async () => (await state()).counters.inside || 0;
+  const dancing = () => page.evaluate(() => window.__diorama.game.group.children.filter((o) => o.userData.arms && Math.abs(o.userData.arms[0].rotation.z) > 2).length);
+  check((await items('ticket-red')).length === 1 && (await items('ticket-yellow')).length === 1, 'concert: red and yellow tickets are loose');
+  check((await items('ticket-violet')).length + (await items('ticket-blue')).length + (await items('ticket-green')).length === 0, 'concert: violet, blue and green tickets cannot be taken yet');
+  await put('ticket-red', 'fan-blue');
+  check((await inside()) === 0, 'concert: the blue fan refuses the red ticket');
+  await fromAbove();
+  await put('ticket-red', 'fan-red');
+  check((await inside()) === 1, 'concert: the red fan takes the red ticket');
+  await hero();
+  await adv(4);
+  await shot('concert-first-dancer');
+  check((await dancing()) === 1, 'concert: the red fan walked in and is dancing');
+  await put('ticket-yellow', 'fan-yellow');
+  check((await inside()) === 1, 'concert: the yellow ticket cannot be grabbed through the booth');
+  await lookFrom(0);
+  await put('ticket-yellow', 'fan-yellow');
+  check((await inside()) === 2, 'concert: from the side the yellow ticket is reachable');
+  await hero();
+  // the cone
+  const cone = (await items('cone'))[0];
+  await carry(cone, [-2.5, 2.8, 5.0]);
+  check((await items('ticket-violet')).length === 1, 'concert: moving the cone frees the violet ticket');
+  await fromAbove();
+  await put('ticket-violet', 'fan-violet');
+  check((await inside()) === 3, 'concert: the violet fan goes in');
+  await hero();
+  // the lamp
+  await put('bulb', 'lamp');
+  check((await state()).flags.lampOn && (await items('ticket-blue')).length === 1, 'concert: the bulb lights the lamp and shows the blue ticket');
+  await shot('concert-lamp-on');
+  await fromAbove();
+  await put('ticket-blue', 'fan-blue');
+  check((await inside()) === 4 && !(await state()).won, 'concert: four inside is not enough');
+  await hero();
+  // the power
+  await put('plug', 'socket');
+  check((await state()).flags.powerOn && (await items('ticket-green')).length === 1, 'concert: the plug brings the stage lights up and shows the green ticket');
+  await fromAbove();
+  await put('ticket-green', 'fan-green');
+  check((await state()).won, 'concert: the fifth fan goes in and it is a full house');
+  await hero();
+  await adv(5);
+  check((await dancing()) === 5, 'concert: all five fans are dancing');
+  await finish('concert');
   check(errors.length === 0, `no console errors ${errors.join(' | ')}`);
 
   // real touch gestures (through the browser's touch input) on a phone-sized page
@@ -349,9 +398,9 @@ try {
   }
 
   // phone portrait framing of every level (a new page has no saved progress, so unlock them first)
-  for (const id of ['tennis', 'museum', 'jungle', 'pirate', 'party', 'dino']) {
+  for (const id of ['tennis', 'museum', 'jungle', 'pirate', 'party', 'dino', 'concert']) {
     const phone = await browser.newPage({ viewport: { width: 390, height: 844 } });
-    await phone.addInitScript(() => localStorage.setItem('diorama-escape:v1', JSON.stringify({ unlocked: ['tennis', 'museum', 'jungle', 'pirate', 'party', 'dino'], solved: [] })));
+    await phone.addInitScript(() => localStorage.setItem('diorama-escape:v1', JSON.stringify({ unlocked: ['tennis', 'museum', 'jungle', 'pirate', 'party', 'dino', 'concert'], solved: [] })));
     await phone.goto(`http://127.0.0.1:${PORT}/?level=${id}`, { waitUntil: 'commit' });
     await phone.waitForFunction(() => window.__dioramaReady);
     await phone.evaluate(() => window.__diorama.advance(1));

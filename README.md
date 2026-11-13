@@ -52,6 +52,7 @@ Two effects are built in: `consume` removes the item that triggered the rule and
 4. **The Pirate Ship** (playable): the cannon needs two things, a ball and a powder keg. Its shot smashes the barrel on the islet and the key flies back on deck; the key opens the chest, and the wheel inside goes on the helm. Anything dropped overboard washes back.
 5. **The Birthday Party** (playable): balloons float up to the ceiling when let go. Pop each one on the cactus to shake out a candle (one balloon is stuck under the table: tilt the view low), put three candles on the cake, and the big present opens with the door key.
 6. **Dinosaur Valley** (playable): creatures go where the food is. Leaves at the tall tree move the long-neck off the egg it is standing over; three eggs in the nest bring the pterodactyl down, dropping her bone; the bone on the flat rock lures the T-rex away from the cave.
+7. **The Concert** (playable): five fans queue outside, each in a colour, each wanting the ticket in that colour. One ticket is in plain sight, one is behind the booth, one is under a traffic cone, one shows up when the street lamp gets its bulb and one when the stage power is plugged in. A fan with a ticket walks in and dances; five dancing wins.
 
 ## Credits
 

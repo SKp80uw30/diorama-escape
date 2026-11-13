@@ -7,8 +7,9 @@ import jungle from '../src/levels/jungle/puzzle.js';
 import pirate from '../src/levels/pirate/puzzle.js';
 import party from '../src/levels/party/puzzle.js';
 import dino from '../src/levels/dino/puzzle.js';
+import concert, { COLORS } from '../src/levels/concert/puzzle.js';
 
-const LEVEL_PUZZLES = { tennis, museum, jungle, pirate, party, dino };
+const LEVEL_PUZZLES = { tennis, museum, jungle, pirate, party, dino, concert };
 const enter = (zone, tag) => ({ type: 'enter', zone, tag });
 const play = (puzzle, moves) => moves.reduce((s, [zone, tag]) => applyEvent(puzzle, s, enter(zone, tag)).state, createState(puzzle));
 
@@ -119,4 +120,17 @@ test('dino: the third egg needs the long-neck lured, and the T-rex only takes th
   s = play(dino, [['nest', 'egg'], ['nest', 'egg'], ['tree', 'fern'], ['nest', 'egg3']]);
   assert.ok(s.flags.swooped && !s.won);
   assert.ok(applyEvent(dino, s, enter('rexRock', 'bone')).state.won);
+});
+
+test('concert: a fan only takes the ticket in their own colour', () => {
+  const s = createState(concert);
+  for (const fan of COLORS) for (const ticket of COLORS) {
+    assert.equal(applyEvent(concert, s, enter(`fan-${fan}`, `ticket-${ticket}`)).accepted, fan === ticket, `${ticket} ticket to ${fan} fan`);
+  }
+});
+
+test('concert: wins only when all five are inside', () => {
+  const four = play(concert, COLORS.slice(0, 4).map((c) => [`fan-${c}`, `ticket-${c}`]));
+  assert.ok(!four.won && four.counters.inside === 4);
+  assert.ok(play(concert, COLORS.map((c) => [`fan-${c}`, `ticket-${c}`])).won);
 });
