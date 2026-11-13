@@ -5,6 +5,7 @@ import { createDioramaOrbit } from './engine/orbit.js';
 import { createLighting } from './engine/lighting.js';
 import { createPhysics } from './game/physics.js';
 import { createGrab } from './game/grab.js';
+import { createInput } from './game/input.js';
 import { createKit } from './game/kit.js';
 import { createState, applyEvent } from './game/puzzle.js';
 import { loadProgress, markSolved } from './game/save.js';
@@ -30,6 +31,11 @@ const hud = createHud({ levels: LEVELS, onPick: (id) => load(id), onRestart: () 
 
 /** Everything belonging to the level on screen; replaced wholesale on load(). */
 let current = null;
+// All finger and mouse input goes through this one handler (see input.js).
+const input = createInput({
+  canvas, camera,
+  get: () => current && { controls: current.orbit.controls, grab: current.grab, slab: current.level.slab, tall: current.level.tall },
+});
 
 function fitPoints({ slab, tall }) {
   const { hx, hz } = slab;
@@ -48,7 +54,7 @@ function load(id) {
   const level = levelById(id);
   if (!level?.build) return;
   if (current) {
-    current.grab.dispose();
+    input.cancel();
     current.orbit.dispose();
     scene.remove(current.group);
     current.group.traverse((o) => { o.geometry?.dispose(); });
@@ -64,13 +70,13 @@ function load(id) {
   const orbit = createDioramaOrbit(camera, canvas, {
     target: CAMERA.target, minDistance: d * 0.45, maxDistance: d * 1.5, maxPolarAngle: Math.PI / 2 - 0.06,
   });
-  // One finger on empty space turns the view, two fingers slide it, pinch zooms.
-  // (Mouse: left-drag turns, right-drag slides, wheel zooms.)
-  orbit.controls.enablePan = true;
-  orbit.controls.screenSpacePanning = true;
+  // The orbit object only holds the look-at target, the limits and the reset pose.
+  // Its own pointer handling is switched off: input.js is the only input handler.
+  orbit.controls.disconnect();
+  canvas.style.touchAction = 'none';
   const { hx, hz } = level.slab;
   const grab = createGrab({
-    canvas, camera, physics, orbit,
+    canvas, camera, physics,
     bounds: { minX: -hx + 0.3, maxX: hx - 0.3, minZ: -hz + 0.3, maxZ: hz - 0.3 },
   });
   grab.setOccluders(kit.occluders);
@@ -99,19 +105,6 @@ function emit(event) {
   }
 }
 
-/** Sliding the view may not take the diorama off screen: the look-at point stays over the slab. */
-const clamped = new THREE.Vector3();
-function keepInView() {
-  const { controls } = current.orbit;
-  const { slab, tall } = current.level;
-  const t = controls.target;
-  clamped.set(Math.max(-slab.hx, Math.min(slab.hx, t.x)), Math.max(-0.5, Math.min(tall, t.y)), Math.max(-slab.hz, Math.min(slab.hz, t.z)));
-  if (clamped.equals(t)) return;
-  camera.position.add(clamped.clone().sub(t));
-  t.copy(clamped);
-  controls.update();
-}
-
 function tick(dt) {
   const c = current;
   c.t += dt;
@@ -126,7 +119,6 @@ function frame(now) {
   const dt = Math.min(0.05, (now - last) / 1000);
   last = now;
   tick(dt);
-  keepInView();
   post.render(scene, camera);
   requestAnimationFrame(frame);
 }
@@ -147,6 +139,7 @@ requestAnimationFrame(frame);
 window.__diorama = {
   THREE, scene, camera, renderer, post,
   get game() { return current; },
+  input,
   /** advance the simulation without waiting for real time */
   advance(seconds) { for (let i = 0; i < Math.round(seconds * 60); i++) tick(1 / 60); post.render(scene, camera); },
 };

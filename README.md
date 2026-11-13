@@ -10,6 +10,7 @@ npm run build        # bundles to dist/ (add -- --minify for release)
 npm run serve        # http://127.0.0.1:5300/
 npm test             # puzzle rules + solver: proves every level can be finished
 npm run qa           # plays every level in a real browser with pointer drags, saves qa/shots/
+node qa/touchfuzz.mjs # random multi-finger touch sequences; fails if a finger is left stuck
 ```
 
 `dist/diorama-escape.html` is the whole game in one file.
@@ -23,7 +24,7 @@ Drag empty space with one finger to turn the diorama, drag with two fingers to s
 | Folder | What it is |
 |---|---|
 | `src/engine/` | Rendering modules from the [diorama kit](https://github.com/sloemo01/diorama) (MIT): hero camera, orbit, lighting, pixel post-pass. Only `palette.js` is changed. |
-| `src/game/` | The game layer: `physics.js` (cannon-es wrapper), `grab.js` (pick up / carry / throw), `puzzle.js` (declarative rules + solver), `kit.js` (level building helpers), `hud.js`, `save.js`, `registry.js`. |
+| `src/game/` | The game layer: `physics.js` (cannon-es wrapper), `input.js` (the only finger and mouse handler: grab, turn, slide, zoom), `grab.js` (pick up / carry / throw), `puzzle.js` (declarative rules + solver), `kit.js` (level building helpers), `hud.js`, `save.js`, `registry.js`. |
 | `src/levels/<id>/` | One folder per diorama: `puzzle.js` (rules as data), `scene.js` (geometry and behaviour), `level.js` (metadata). |
 
 ## Add a level
