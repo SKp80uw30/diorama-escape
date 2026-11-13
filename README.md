@@ -16,7 +16,7 @@ npm run qa           # plays every level in a real browser with pointer drags, s
 
 ## Controls
 
-Drag empty space to orbit, pinch or scroll to zoom, `R` resets the view. Press on a loose object to pick it up, drag to carry it, release to drop it; release while moving to throw it.
+Drag the orb in the bottom-right corner to turn the diorama; double-tap it to reset the view. Zoom with the + and − buttons beside it, or pinch or scroll. Dragging on the diorama itself never turns it. Press on a loose object to pick it up, drag to carry it, release to drop it; release while moving to throw it.
 
 ## Layout
 

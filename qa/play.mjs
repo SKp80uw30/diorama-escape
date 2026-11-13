@@ -40,10 +40,15 @@ try {
     const z = window.__diorama.game.physics.zones.find((z) => z.id === id);
     return [(z.min[0] + z.max[0]) / 2, 2.8, (z.min[2] + z.max[2]) / 2];
   }, id);
-  const orbitBy = async (dx) => {
-    await page.mouse.move(100, 620); await page.mouse.down();
-    await page.mouse.move(100 + dx, 620, { steps: 6 }); await page.mouse.up();
+  const camPos = () => page.evaluate(() => window.__diorama.camera.position.toArray());
+  const moved = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+  /** a real drag starting at a screen point */
+  const drag = async (x, y, dx, dy = 0) => {
+    await page.mouse.move(x, y); await page.mouse.down();
+    await page.mouse.move(x + dx, y + dy, { steps: 6 }); await page.mouse.up();
+    await adv(0.1);
   };
+  const orbCentre = async () => { const b = await page.locator('#de-orb').boundingBox(); return [b.x + b.width / 2, b.y + b.height / 2]; };
   /** put the camera at an exact azimuth so checks do not depend on drag speed */
   const lookFrom = async (azDeg, el = 0.6) => {
     await page.evaluate(([azDeg, el]) => {
@@ -94,7 +99,27 @@ try {
   balls = await items('ball');
   await carry(balls[0], hopper);
   check((await state()).counters.balls === 2, 'tennis: hidden ball cannot be grabbed through the scoreboard');
-  await orbitBy(200); // a real drag, to prove orbit still works alongside grabbing
+  // the view turns only from the orb, never by dragging on the diorama
+  let before = await camPos();
+  await drag(100, 560, 200);
+  check(moved(before, await camPos()) < 1e-6, 'view: dragging empty space on the diorama does not turn it');
+  const [ox, oy] = await orbCentre();
+  await drag(ox, oy, -30, 10);
+  let after = await camPos();
+  check(moved(before, after) > 1 && Math.abs(Math.hypot(...before) - Math.hypot(...after)) < 0.05, 'view: dragging the orb turns the diorama without zooming');
+  await page.mouse.dblclick(ox, oy);
+  await adv(0.1);
+  check(moved(before, await camPos()) < 1e-6, 'view: double-tapping the orb resets the view');
+  await page.getByLabel('Zoom in').click();
+  await adv(0.1);
+  check(Math.hypot(...(await camPos())) < Math.hypot(...before) - 1, 'view: the + button zooms in');
+  await page.getByLabel('Zoom out').click();
+  await page.mouse.move(500, 320); await page.mouse.wheel(0, -300);
+  await adv(0.1);
+  check(Math.hypot(...(await camPos())) < Math.hypot(...before) - 0.5, 'view: scrolling over the diorama still zooms');
+  await page.mouse.dblclick(ox, oy);
+  await adv(0.1);
+  await shot('tennis-orb');
   await lookFrom(250);
   balls = await items('ball');
   await carry(balls[0], hopper);

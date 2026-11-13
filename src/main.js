@@ -9,6 +9,7 @@ import { createKit } from './game/kit.js';
 import { createState, applyEvent } from './game/puzzle.js';
 import { loadProgress, markSolved } from './game/save.js';
 import { createHud } from './game/hud.js';
+import { createOrb } from './game/orb.js';
 import { LEVELS, levelById, nextOf } from './game/registry.js';
 
 const canvas = document.getElementById('stage');
@@ -30,6 +31,8 @@ const hud = createHud({ levels: LEVELS, onPick: (id) => load(id), onRestart: () 
 
 /** Everything belonging to the level on screen; replaced wholesale on load(). */
 let current = null;
+// The view is turned only with the orb, never by dragging on the diorama.
+const orb = createOrb({ getOrbit: () => current.orbit, camera });
 
 function fitPoints({ slab, tall }) {
   const { hx, hz } = slab;
@@ -64,6 +67,7 @@ function load(id) {
   const orbit = createDioramaOrbit(camera, canvas, {
     target: CAMERA.target, minDistance: d * 0.45, maxDistance: d * 1.5, maxPolarAngle: Math.PI / 2 - 0.06,
   });
+  orbit.controls.enableRotate = false; // dragging the diorama is for objects; the orb turns the view
   const { hx, hz } = level.slab;
   const grab = createGrab({
     canvas, camera, physics, orbit,
@@ -109,6 +113,7 @@ function frame(now) {
   const dt = Math.min(0.05, (now - last) / 1000);
   last = now;
   tick(dt);
+  orb.draw();
   post.render(scene, camera);
   requestAnimationFrame(frame);
 }
@@ -128,6 +133,7 @@ requestAnimationFrame(frame);
 window.__diorama = {
   THREE, scene, camera, renderer, post,
   get game() { return current; },
+  orb,
   /** advance the simulation without waiting for real time */
   advance(seconds) { for (let i = 0; i < Math.round(seconds * 60); i++) tick(1 / 60); post.render(scene, camera); },
 };
