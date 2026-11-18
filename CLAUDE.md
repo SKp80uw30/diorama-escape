@@ -26,6 +26,11 @@ here, stop and ask the owner first.
 
 After any change, `npm run qa` and `node qa/touchfuzz.mjs` must both pass.
 
+## Adding levels
+
+Use the `new-level` skill (`.claude/skills/new-level/SKILL.md`): it has the scaffolder, the rules grammar,
+the kit reference, the gotchas and the checks. `node scripts/new-level.mjs <id> "<Title>"` starts a level.
+
 ## Working with the owner
 
 - Publish a playable test build for the owner to try before treating work as done.

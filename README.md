@@ -31,6 +31,8 @@ The navigation is approved as final: see `CLAUDE.md` before touching `input.js` 
 
 ## Add a level
 
+Quickest: `node scripts/new-level.mjs <id> "<Title>"`, then see `.claude/skills/new-level/SKILL.md` for the full workflow (it is also a Claude Code skill). By hand:
+
 1. Create `src/levels/<id>/` with `puzzle.js`, `scene.js` and `level.js` (copy `tennis/`).
 2. Add it to `LEVELS` in `src/game/registry.js`.
 3. Add its puzzle to `LEVEL_PUZZLES` in `test/puzzle.test.mjs` so the solver checks it.
