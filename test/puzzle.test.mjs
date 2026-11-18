@@ -2,8 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createState, applyEvent, solve } from '../src/game/puzzle.js';
 import tennis from '../src/levels/tennis/puzzle.js';
+import { LEVELS } from '../src/game/registry.js';
 
-const LEVEL_PUZZLES = { tennis };
+const LEVEL_PUZZLES = Object.fromEntries(LEVELS.filter((l) => l.puzzle).map((l) => [l.id, l.puzzle]));
 
 for (const [id, puzzle] of Object.entries(LEVEL_PUZZLES)) {
   test(`${id}: can be solved`, () => {

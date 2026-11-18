@@ -10,8 +10,10 @@
  * (e.g. { on:'enter', zone:'hopper', tag:'ball' }). Rules without `on` are
  * derived: they fire once, as soon as `when` holds.
  *
- * when: { flag, not, gte:[counter, n] }  (all must hold)
- * do:   ['set', flag] | ['inc', counter] | ['fx', name, payload?] | ['win']
+ * Taps on switches arrive as { on:'tap', target:'wheel' }.
+ *
+ * when: { flag, not, gte:[counter, n] }  (all must hold; flag/not may be arrays)
+ * do:   ['set', flag] | ['inc', counter] | ['fx', name, payload?] | ['say', text] | ['win']
  */
 const RESERVED = new Set(['on', 'when', 'do']);
 
@@ -26,8 +28,8 @@ export function createState(puzzle) {
 
 function holds(when, s) {
   if (!when) return true;
-  if (when.flag && !s.flags[when.flag]) return false;
-  if (when.not && s.flags[when.not]) return false;
+  if ([].concat(when.flag ?? []).some((f) => !s.flags[f])) return false;
+  if ([].concat(when.not ?? []).some((f) => s.flags[f])) return false;
   if (when.gte && (s.counters[when.gte[0]] || 0) < when.gte[1]) return false;
   return true;
 }
@@ -45,6 +47,7 @@ function run(actions, s, effects) {
     if (op === 'set') s.flags[a] = true;
     else if (op === 'inc') s.counters[a] = (s.counters[a] || 0) + 1;
     else if (op === 'fx') effects.push({ name: a, payload: b });
+    else if (op === 'say') effects.push({ name: 'say', payload: a });
     else if (op === 'win') s.won = true;
     else throw new Error(`puzzle: unknown action ${op}`);
   }
@@ -70,11 +73,12 @@ export function applyEvent(puzzle, state, event) {
 }
 
 /**
- * Breadth-first search over "put item X in zone Y" moves. Returns the shortest
+ * Breadth-first search over "put item X in zone Y" and "tap switch Z" moves. Returns the shortest
  * list of moves that wins, or null if the level cannot be finished.
  */
 export function solve(puzzle, maxDepth = 40) {
   const zones = [...new Set(puzzle.rules.filter((r) => r.zone).map((r) => r.zone))];
+  const taps = [...new Set(puzzle.rules.filter((r) => r.on === 'tap').map((r) => r.target))];
   const start = { state: createState(puzzle), used: {}, path: [] };
   const seen = new Set();
   let frontier = [start];
@@ -94,6 +98,14 @@ export function solve(puzzle, maxDepth = 40) {
           seen.add(key);
           next.push({ state: r.state, used, path: [...node.path, { tag, zone }] });
         }
+      }
+      for (const target of taps) {
+        const r = applyEvent(puzzle, node.state, { type: 'tap', target });
+        if (!r.accepted) continue;
+        const key = JSON.stringify([r.state.flags, r.state.counters, r.state.won, node.used]);
+        if (seen.has(key)) continue;
+        seen.add(key);
+        next.push({ state: r.state, used: node.used, path: [...node.path, { tap: target }] });
       }
     }
     frontier = next;

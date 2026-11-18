@@ -48,7 +48,7 @@ try {
     await adv(1.5);
   };
 
-  const hopper = [-5.3, 2.8, 0.4];
+  const hopper = [-5.2, 1.3, 0.4]; // point at the hopper itself; the carried item hovers above what is under the pointer
   let balls = await items('ball');
   check(balls.length === 3, `three balls on the court (${balls.length})`);
   // ball in plain sight
@@ -81,12 +81,33 @@ try {
   const keys = await items('key');
   check(keys.length === 1 && keys[0][1] < 1, `key was knocked down and is on the ground (${JSON.stringify(keys[0]?.map((n) => +n.toFixed(2)))})`);
   check(!(await state()).won, 'not won before the key is used');
-  await carry(keys[0], [7.3, 2.8, 0]);
+  await carry(keys[0], [7.3, 0.05, 0]);
   s = await state();
   check(s.won && s.flags.gateOpen, 'dropping the key at the gate opens it and wins');
   await adv(1.5); await page.waitForTimeout(1300);
   await page.screenshot({ path: 'qa/shots/04-won.png' });
   check(await page.locator('#de-win').isVisible(), 'level-complete card is shown');
+
+  // --- new mechanics with real pointer input ---------------------------------
+  // tap: clicking the airlock wheel without power gives the "no power" message
+  await page.evaluate(() => { window.__diorama.load('underwater'); window.__diorama.advance(0.5); });
+  await page.mouse.click(...(await screen([6.4, 1.1, -2.16])));
+  await adv(0.2);
+  check((await page.locator('#de-hint').textContent()).includes('no power'), 'clicking the airlock wheel reaches the puzzle (no power yet)');
+  // carry up high: drag the pebble onto the bell tower top and drop it in the belfry
+  await page.evaluate(() => { window.__diorama.load('clouds'); window.__diorama.advance(0.5); });
+  const pebble = (await items('pebble'))[0];
+  await carry(pebble, [5.8, 4.45, -3.4]);
+  check((await state()).flags.bell === true, 'pebble carried onto the tower top rings the bell');
+  await adv(2);
+  check((await items('blue')).length === 1, 'the blue crystal appears after the cloud drifts away');
+  await page.screenshot({ path: 'qa/shots/06-bell.png' });
+  // tap in the skyscraper: the filing cabinet drawer gives up the paper
+  await page.evaluate(() => { window.__diorama.load('skyscraper'); window.__diorama.advance(0.5); });
+  await page.mouse.click(...(await screen([-6.3, 1.15, 0.8])));
+  await adv(1);
+  check((await items('paper')).length === 1, 'clicking the cabinet drawer releases the paper');
+
   check(errors.length === 0, `no console errors ${errors.join(' | ')}`);
 
   // phone portrait framing

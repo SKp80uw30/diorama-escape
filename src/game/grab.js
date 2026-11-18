@@ -1,16 +1,20 @@
 /**
- * Pick up, carry and throw. Press on (or near) a grabbable item and it lifts to
- * a carry height and follows the pointer; release and it keeps its velocity, so
- * a flick is a throw. Pressing anywhere else falls through to camera orbit.
+ * Pick up, carry and throw. Press on (or near) a grabbable item and it follows
+ * the pointer, hovering `lift` above whatever surface is under it (floor, desk,
+ * rooftop, tower top), so items can be placed on anything you can see. Release
+ * and it keeps its velocity: a flick is a throw, and a fast throw also lobs
+ * upward. Pressing anywhere else falls through to camera orbit.
  */
 import * as THREE from 'three';
 
-export function createGrab({ canvas, camera, physics, orbit, bounds, carryY = 2.8, pickRadius = 46, maxThrow = 15 }) {
+export function createGrab({ canvas, camera, physics, orbit, bounds, lift = 1.3, maxY = 9, pickRadius = 46, maxThrow = 15 }) {
   const ray = new THREE.Raycaster();
   const ndc = new THREE.Vector2();
-  const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -carryY);
+  const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
   const target = new THREE.Vector3();
   const v = new THREE.Vector3();
+  const n = new THREE.Vector3();
+  let carryY = 2;
   let held = null;
   let pointerId = null;
   let occluders = [];
@@ -50,6 +54,7 @@ export function createGrab({ canvas, camera, physics, orbit, bounds, carryY = 2.
     if (!item) return;
     held = item;
     item.held = true;
+    carryY = item.body.position.y + 0.6;
     pointerId = e.pointerId;
     orbit.controls.enabled = false;
     canvas.setPointerCapture?.(e.pointerId);
@@ -62,6 +67,8 @@ export function createGrab({ canvas, camera, physics, orbit, bounds, carryY = 2.
   function up(e) {
     if (!held || e.pointerId !== pointerId) return;
     const b = held.body;
+    const hs = Math.hypot(b.velocity.x, b.velocity.z);
+    if (hs > 3) b.velocity.y = Math.max(b.velocity.y, hs * 0.45); // a fast release is a lob
     const speed = b.velocity.length();
     if (speed > maxThrow) b.velocity.scale(maxThrow / speed, b.velocity);
     held.held = false;
@@ -81,7 +88,19 @@ export function createGrab({ canvas, camera, physics, orbit, bounds, carryY = 2.
     if (!held) return;
     if (!held.alive) { up({ pointerId }); return; }
     ray.setFromCamera(ndc, camera);
-    if (!ray.ray.intersectPlane(plane, target)) return;
+    const hit = ray.intersectObjects(occluders, true)[0];
+    if (hit) {
+      // hover over the surface under the pointer; in front of it if it is a wall
+      n.copy(hit.face ? hit.face.normal : plane.normal).transformDirection(hit.object.matrixWorld);
+      if (n.dot(ray.ray.direction) > 0) n.negate();
+      target.copy(hit.point);
+      if (n.y < 0.5) target.addScaledVector(n, 0.45);
+      carryY += (Math.min(maxY, target.y + lift) - carryY) * 0.25;
+    } else {
+      plane.constant = -carryY;
+      if (!ray.ray.intersectPlane(plane, target)) return;
+    }
+    target.y = carryY;
     target.x = Math.max(bounds.minX, Math.min(bounds.maxX, target.x));
     target.z = Math.max(bounds.minZ, Math.min(bounds.maxZ, target.z));
     const b = held.body;
