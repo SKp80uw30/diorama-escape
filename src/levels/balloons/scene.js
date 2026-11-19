@@ -1,7 +1,8 @@
 /**
  * Hot Air Balloons: a launch meadow at sunrise, other balloons already aloft.
  *   centre       our basket ('basket' zone) with burner; the envelope lies
- *                deflated beside it; tethered to a stake ('stake', tappable)
+ *                deflated beside it; tethered to a stake that can be pulled up
+ *                once the balloon is inflated, and stowed in the basket
  *   around it    three sandbags: two by the basket, one on the hay wagon
  *   front right  chalk-ringed ballast pile ('pile' zone)
  *   back left    shed, with the gas canister hidden behind it
@@ -20,7 +21,7 @@ export const ENVELOPES = [
 ];
 
 export function build(ctx) {
-  const { THREE, box, cyl, cone, sphere, add, rod, item, zone, mat, glow, group, tappable, hitbox, lights } = ctx;
+  const { THREE, box, cyl, cone, sphere, add, rod, item, zone, mat, glow, group, lights } = ctx;
   lights.sun.color.set(0xfff0d8); lights.sun.intensity = 3.2;
   lights.hemi.color.set(0xcfe8ff); lights.hemi.groundColor.set(0x5a9e45); lights.hemi.intensity = 0.45;
   ctx.slab(8.4, 5.6, C.grass, C.soil, 0.5);
@@ -96,11 +97,11 @@ export function build(ctx) {
 
   // tether stake
   const ST = { x: 2.6, z: 2.5 };
-  const stake = cyl(0.07, 0.04, 0.7, C.woodDark, ST.x, 0.3, ST.z, { rot: [0.25, 0, -0.2] });
-  const tether = rod([B.x + 0.6, 0.85, B.z + 0.6], [ST.x - 0.05, 0.55, ST.z], 0.03, C.rope);
-  tappable(stake, 'stake');
-  tappable(tether, 'stake');
-  hitbox(0.9, 1.1, 0.9, ST.x, 0.45, ST.z, 'stake');
+  const stake = cyl(0.07, 0.04, 0.7, C.woodDark, ST.x, 0.3, ST.z, { rot: [0.25, 0, -0.2], occlude: false });
+  const knot = [B.x + 0.6, 0.85, B.z + 0.6];
+  const tether = rod(knot, [ST.x - 0.05, 0.55, ST.z], 0.03, C.rope);
+  let loose = null; // the stake becomes a loose item once the balloon is ready
+  const ropeFrom = new THREE.Vector3(...knot), ropeTo = new THREE.Vector3(), yAxis = new THREE.Vector3(0, 1, 0);
 
   // --- sandbags and the ballast pile -------------------------------------------------
   const bagMesh = (x, y, z) => {
@@ -192,10 +193,17 @@ export function build(ctx) {
       flame.visible = true;
       flame.scale.setScalar(0.4);
     },
-    inflate() { inflateT = 0; },
+    inflate() {
+      inflateT = 0;
+      stake.visible = false;
+      const m = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.04, 0.7, 10), mat(C.woodDark));
+      m.position.set(ST.x, 0.36, ST.z);
+      loose = item(m, { tag: 'stake', shape: { box: [0.16, 0.7, 0.16] }, mass: 0.4 });
+    },
     liftoff() {
       liftT = 0;
       tether.visible = false;
+      loose = null;
       fx.burst([B.x + 0.6, 0.85, B.z + 0.6], { count: 14, speed: 1.6, colors: [0xefe0b8], life: 0.6, gravity: -5, drag: 1 });
     },
   };
@@ -206,6 +214,12 @@ export function build(ctx) {
       f.b.position.set(f.base[0] + Math.sin(t * 0.15 + f.off) * 0.6, f.base[1] + Math.sin(t * 0.6 + f.off) * 0.3, f.base[2]);
     }
     sock.rotation.y = 0.9 + Math.sin(t * 0.7) * 0.25;
+    if (loose?.alive) { // the tether follows the stake while it is carried
+      ropeTo.copy(loose.mesh.position);
+      tether.position.copy(ropeFrom).add(ropeTo).multiplyScalar(0.5);
+      tether.scale.y = Math.max(0.05, ropeFrom.distanceTo(ropeTo) / tether.geometry.parameters.height);
+      tether.quaternion.setFromUnitVectors(yAxis, ropeTo.clone().sub(ropeFrom).normalize());
+    }
     sock.rotation.x = Math.sin(t * 1.9) * 0.08;
     if (flame.visible) {
       const base = inflateT === null ? 0.4 : 1;

@@ -4,7 +4,7 @@ import { build } from './scene.js';
 export default {
   id: 'skyscraper',
   title: 'The Skyscraper',
-  hint: 'Stranded on the roof at dusk. Fireworks would get someone\'s attention, but the console is caged.',
+  hint: 'Stranded on the roof at dusk. Fireworks would get someone\'s attention, but the big rocket is locked in a cage.',
   slab: { hx: 7.6, hz: 5.0 },
   tall: 6.2,
   depth: 2.6,

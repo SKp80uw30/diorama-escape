@@ -4,7 +4,7 @@
  *                   crystal on top, three pedestals ('pedRed','pedYellow','pedBlue'),
  *                   a pebble
  *   B (front right) little shrine holding the yellow crystal
- *   C (back right)  bell tower ('bell' zone in the belfry) and a sleepy cloud
+ *   C (back right)  bell tower ('bell' zone in the belfry, at carrying height) and a sleepy cloud
  *                   sitting on the blue crystal
  * Anything dropped into the gaps falls away and reappears where it started.
  */
@@ -115,10 +115,10 @@ export function build(ctx) {
   crystal('yellow', S.x, S.y + 1.0, S.z);
 
   // --- bell tower on island C -------------------------------------------------------
-  const BT = { x: 5.8, z: -3.4, base: 1.0, top: 4.4 };
+  const BT = { x: 5.8, z: -3.4, base: 1.0, top: 2.0 }; // belfry at carrying height
   const th = BT.top - BT.base;
   box(1.1, th, 1.1, C.stone, BT.x, BT.base + th / 2, BT.z, { solid: true });
-  for (const y of [2.0, 3.2]) box(0.25, 0.45, 0.05, C.ink, BT.x, y, BT.z + 0.56, { shadow: false, occlude: false });
+  box(0.25, 0.45, 0.05, C.ink, BT.x, 1.5, BT.z + 0.56, { shadow: false, occlude: false });
   box(1.25, 0.12, 1.25, C.stoneDark, BT.x, BT.top + 0.06, BT.z);
   for (const [dx, dz] of [[-0.5, -0.5], [0.5, -0.5], [-0.5, 0.5], [0.5, 0.5]]) {
     cyl(0.07, 0.07, 1.15, C.stone, BT.x + dx, BT.top + 0.65, BT.z + dz, { occlude: false });
@@ -134,7 +134,7 @@ export function build(ctx) {
   const clapper = new THREE.Mesh(new THREE.IcosahedronGeometry(0.07, 0), mat(C.iron));
   clapper.position.y = -0.5;
   bell.add(clapper);
-  zone('bell', [BT.x - 0.75, BT.top + 0.05, BT.z - 0.75], [BT.x + 0.75, BT.top + 1.4, BT.z + 0.75]);
+  zone('bell', [BT.x - 0.8, BT.top + 0.05, BT.z - 0.8], [BT.x + 0.8, BT.top + 1.6, BT.z + 0.8]);
 
   // the sleepy cloud sitting on the blue crystal
   // (a lavender-grey puff with a face, turned toward the hero camera so it reads as a character)

@@ -5,8 +5,16 @@
  * Level contract (see any levels/<id>/level.js):
  *   { id, title, hint, slab:{hx,hz}, tall, depth?, fit?:[[x,y,z]], physics?:{gravity,damping},
  *     winDelay?, puzzle, build(ctx) -> { update?(dt,t,state), fx? } }
+ * fx handlers get (payload, state, event); the built-in fx are 'consume' and 'hint'
+ * (rules can also use ['say', text], which is the same as a hint).
  */
 import tennis from '../levels/tennis/level.js';
+import museum from '../levels/museum/level.js';
+import jungle from '../levels/jungle/level.js';
+import pirate from '../levels/pirate/level.js';
+import party from '../levels/party/level.js';
+import dino from '../levels/dino/level.js';
+import concert from '../levels/concert/level.js';
 import underwater from '../levels/underwater/level.js';
 import clouds from '../levels/clouds/level.js';
 import skyscraper from '../levels/skyscraper/level.js';
@@ -14,12 +22,16 @@ import balloons from '../levels/balloons/level.js';
 
 export const LEVELS = [
   tennis,
+  museum,
+  jungle,
+  pirate,
+  party,
+  dino,
+  concert,
   underwater,
   clouds,
   skyscraper,
   balloons,
-  { id: 'museum', title: 'The Ancient Museum' },
-  { id: 'jungle', title: 'The Jungle Temple' },
 ];
 
 /**

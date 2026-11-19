@@ -35,4 +35,7 @@ ${script}
 `;
 await writeFile('dist/index.html', page('<script src="./app.js"></script>'));
 await writeFile('dist/diorama-escape.html', page(`<script>${js}</script>`));
+// The same game as a page fragment (no doctype/html/head/body) for publishing as a Claude artifact test build.
+await writeFile('dist/diorama-escape.artifact.html',
+  `<title>Diorama Escape</title>\n<style>:root{color-scheme:light}${css}</style>\n<canvas id="stage" aria-label="A miniature diorama you can orbit and interact with"></canvas>\n<script>${js}</script>\n`);
 console.log(`built dist/index.html and dist/diorama-escape.html (${(js.length / 1024).toFixed(0)} kB)`);

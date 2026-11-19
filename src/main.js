@@ -1,9 +1,10 @@
 import * as THREE from 'three';
 import { PixelPost } from './engine/post.js';
 import { CAMERA, createCamera, updateCamera } from './engine/camera.js';
-import { createView } from './game/view.js';
+import { createDioramaOrbit } from './engine/orbit.js';
 import { createLighting } from './engine/lighting.js';
 import { createGrab } from './game/grab.js';
+import { createInput } from './game/input.js';
 import { createSession } from './game/session.js';
 import { autoplay } from './game/autoplay.js';
 import { solve } from './game/puzzle.js';
@@ -22,6 +23,7 @@ renderer.toneMapping = THREE.NoToneMapping;
 const scene = new THREE.Scene();
 scene.background = null;
 const lights = createLighting(renderer, scene);
+// levels may recolour the lights (underwater, dusk...); every load starts from these
 const LIGHT_DEFAULTS = {
   sun: [lights.sun.color.getHex(), lights.sun.intensity],
   fill: [lights.fill.color.getHex(), lights.fill.intensity],
@@ -41,8 +43,13 @@ const hud = createHud({ levels: LEVELS, isOpen, onPick: (id) => load(id), onRest
 
 /** Everything belonging to the level on screen; replaced wholesale on load(). */
 let current = null;
+// All finger and mouse input goes through this one handler (see input.js).
+const input = createInput({
+  canvas, camera,
+  get: () => current && { controls: current.orbit.controls, grab: current.grab, slab: current.level.slab, tall: current.level.tall },
+});
 
-function fitPoints({ slab, tall = 4, depth = 0.5, fit = [] }) {
+function fitPoints({ slab, tall, depth = 0.5, fit = [] }) {
   const { hx, hz } = slab;
   const pts = [new THREE.Vector3(0, tall, 0), ...fit.map((p) => new THREE.Vector3(...p))];
   for (const y of [0, -depth]) for (const sx of [-1, 1]) for (const sz of [-1, 1]) pts.push(new THREE.Vector3(sx * hx, y, sz * hz));
@@ -55,55 +62,38 @@ function size() {
   return w / h;
 }
 
-const tapRay = new THREE.Raycaster();
-const tapNdc = new THREE.Vector2();
-/** A click that was not a drag: did it land on a switch? */
-function tapAt(e) {
-  const c = current;
-  if (!c || !c.kit.taps.length) return;
-  const r = canvas.getBoundingClientRect();
-  tapNdc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
-  tapRay.setFromCamera(tapNdc, camera);
-  const hits = tapRay.intersectObjects([...c.kit.taps.map((t) => t.object), ...c.kit.occluders], true);
-  for (const h of hits) {
-    if (h.distance > hits[0].distance + 0.5) break;
-    for (let o = h.object; o && o !== c.group; o = o.parent) {
-      if (o.userData.tapId) { c.emit({ type: 'tap', target: o.userData.tapId }); return; }
-    }
-  }
-}
-
 function load(id) {
   const level = levelById(id);
   if (!level?.build) return;
   if (current) {
-    current.grab.dispose();
-    current.view.dispose();
+    input.cancel();
+    current.orbit.dispose();
     scene.remove(current.group);
     current.group.traverse((o) => { o.geometry?.dispose(); });
   }
   resetLights();
   hud.setLevel(level);
+  // the level's scene, physics, kit and puzzle state (see game/session.js)
   const session = createSession(level, { lights, say: (text) => hud.setHint(text), onWin: () => won(session) });
-  scene.add(session.group);
+  const { group, physics, kit } = session;
+  scene.add(group);
   const points = fitPoints(level);
   updateCamera(camera, size(), points);
   const d = camera.userData.distance;
-  const { hx, hz } = level.slab;
-  let grab = null;
-  // the same camera controls for every level: see game/view.js
-  const view = createView({
-    camera, canvas, target: CAMERA.target, distance: d,
-    bounds: { minX: -hx, maxX: hx, minY: -0.5, maxY: (level.tall ?? 4) * 0.8, minZ: -hz, maxZ: hz },
-    onSelect: tapAt, onTwoFingers: () => grab?.cancel(),
+  const orbit = createDioramaOrbit(camera, canvas, {
+    target: CAMERA.target, minDistance: d * 0.45, maxDistance: d * 1.5, maxPolarAngle: Math.PI / 2 - 0.06,
   });
-  const orbit = view.orbit;
-  grab = createGrab({
-    canvas, camera, physics: session.physics, orbit,
+  // The orbit object only holds the look-at target, the limits and the reset pose.
+  // Its own pointer handling is switched off: input.js is the only input handler.
+  orbit.controls.disconnect();
+  canvas.style.touchAction = 'none';
+  const { hx, hz } = level.slab;
+  const grab = createGrab({
+    canvas, camera, physics,
     bounds: { minX: -hx + 0.3, maxX: hx - 0.3, minZ: -hz + 0.3, maxZ: hz - 0.3 },
   });
-  grab.setOccluders(session.kit.occluders);
-  current = Object.assign(session, { view, orbit, grab, points });
+  grab.setOccluders(kit.occluders);
+  current = Object.assign(session, { orbit, grab, points });
   hud.setProgress(progress, level.id);
 }
 
@@ -116,7 +106,7 @@ function won(session) {
 
 function tick(dt) {
   current.grab.update();
-  current.tick(dt);
+  current.tick(dt); // physics, puzzle events, tweens and the level's own animation
 }
 
 let last = performance.now();
@@ -130,6 +120,7 @@ function frame(now) {
 
 window.addEventListener('resize', () => {
   if (!current) return;
+  current.orbit.controls.target.copy(CAMERA.target);
   updateCamera(camera, size(), current.points);
   current.orbit.controls.update();
 });
@@ -143,6 +134,7 @@ requestAnimationFrame(frame);
 window.__diorama = {
   THREE, scene, camera, renderer, post,
   get game() { return current; },
+  input,
   levels: LEVELS.filter((l) => l.build).map((l) => l.id),
   load,
   solve: () => solve(current.level.puzzle),

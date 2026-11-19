@@ -16,6 +16,9 @@ export function createPhysics({ gravity = -22, damping = 0.02 } = {}) {
   world.allowSleep = true;
   world.defaultContactMaterial.friction = 0.45;
   world.defaultContactMaterial.restitution = 0.38;
+  // "soft" items (relics, stones) land with a thud instead of bouncing like a ball
+  const softMaterial = new CANNON.Material('soft');
+  world.addContactMaterial(new CANNON.ContactMaterial(softMaterial, world.defaultMaterial, { friction: 0.7, restitution: 0.05 }));
   const items = [];
   const zones = [];
 
@@ -30,17 +33,29 @@ export function createPhysics({ gravity = -22, damping = 0.02 } = {}) {
 
   function removeStatic(body) { world.removeBody(body); }
 
-  /** shape: { sphere: r } or { box: [w, h, d] } */
-  function addItem(mesh, { tag, shape, mass = 1, grabbable = true, velocity } = {}) {
-    const body = new CANNON.Body({ mass, linearDamping: damping, angularDamping: 0.35 });
+  // floating items (balloons): an upward push applied on every physics sub-step
+  world.addEventListener('preStep', () => {
+    for (const item of items) if (item.alive && item.lift) item.body.force.y += item.body.mass * (item.lift - gravity);
+  });
+
+  /**
+   * shape: { sphere: r } or { box: [w, h, d] }
+   * lift: upward acceleration for things that float (0 = falls normally)
+   * upright: never tips over or spins
+   */
+  function addItem(mesh, { tag, shape, mass = 1, grabbable = true, velocity, soft = false, lift = 0, upright = false } = {}) {
+    const body = new CANNON.Body({ mass, linearDamping: damping, angularDamping: soft ? 0.6 : 0.35 });
+    if (soft) body.material = softMaterial;
     if (shape.sphere) body.addShape(new CANNON.Sphere(shape.sphere));
     else body.addShape(new CANNON.Box(new CANNON.Vec3(shape.box[0] / 2, shape.box[1] / 2, shape.box[2] / 2)));
     body.position.copy(mesh.position);
     body.quaternion.copy(mesh.quaternion);
     if (velocity) body.velocity.set(...velocity);
     body.sleepSpeedLimit = 0.15;
+    if (lift) { body.linearDamping = 0.6; body.allowSleep = false; }
+    if (upright) { body.fixedRotation = true; body.updateMassProperties(); }
     world.addBody(body);
-    const item = { body, mesh, tag, grabbable, held: false, alive: true, falls: 0, home: mesh.position.clone() };
+    const item = { body, mesh, tag, grabbable, lift, held: false, alive: true, falls: 0, home: mesh.position.clone() };
     items.push(item);
     return item;
   }

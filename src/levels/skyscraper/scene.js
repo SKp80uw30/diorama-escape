@@ -1,10 +1,10 @@
 /**
  * The Skyscraper: the top of a tower block at dusk.
- *   left half   glass-walled penthouse office: filing cabinet (tap the top
- *               drawer: 'drawer'), desk, sofa, and the big printer ('printer' zone)
+ *   left half   glass-walled penthouse office: filing cabinet with the paper
+ *               hidden behind it, desk, sofa, and the big printer ('printer' zone)
  *   right half  roof deck: helipad, AC unit with the ink cartridge hidden behind
- *               it, card reader ('reader' zone), caged launch console ('button'),
- *               fireworks rack and antenna mast
+ *               it, card reader ('reader' zone), a cage holding the rocket, and
+ *               the fireworks rack ('launcher' zone)
  */
 const C = {
   roof: '#9ba7ab', body: '#606b70', bodyDark: '#3b4449', winDark: '#3f6ea5', winLit: '#fff3a8',
@@ -16,7 +16,7 @@ const C = {
 const FIREWORK_COLORS = [[0xd9503c, 0xf5e050], [0x6fa0c9, 0xffffff], [0x7fb84f, 0xf5e050], [0x9d8cc0, 0xe8c8e0], [0xef6a52, 0xfff3a8]];
 
 export function build(ctx) {
-  const { THREE, box, cyl, cone, sphere, add, item, zone, mat, glow, group, tappable, hitbox, lights } = ctx;
+  const { THREE, box, cyl, cone, sphere, add, item, zone, mat, glow, group, lights } = ctx;
   lights.sun.color.set(0xffc890); lights.sun.intensity = 2.7;
   lights.fill.color.set(0x6f7fc9); lights.fill.intensity = 0.8;
   lights.hemi.color.set(0x9d8cc0); lights.hemi.groundColor.set(0x463f38); lights.hemi.intensity = 0.8;
@@ -83,7 +83,7 @@ export function build(ctx) {
     sphere(0.42, C.plant, x, 0.75, z, { detail: 0, occlude: false });
   }
 
-  // filing cabinet with the tappable top drawer
+  // filing cabinet (the paper ream is on the floor behind it)
   const FC = { x: -6.75, z: 0.8 };
   box(0.8, 1.35, 0.75, C.steelDark, FC.x, 0.675, FC.z, { solid: true });
   for (const y of [0.25, 0.7]) {
@@ -96,8 +96,10 @@ export function build(ctx) {
   box(0.04, 0.36, 0.65, C.steel, 0.41, 0, 0, { parent: drawer });
   box(0.04, 0.05, 0.22, C.yellow, 0.44, 0.08, 0, { parent: drawer });
   box(0.75, 0.3, 0.6, C.steelDark, 0.03, 0, 0, { parent: drawer });
-  tappable(drawer, 'drawer');
-  hitbox(0.5, 0.45, 0.8, FC.x + 0.45, 1.15, FC.z, 'drawer');
+  const ream = new THREE.Group();
+  ream.add(new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.15, 0.36), mat(C.white)), new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.16, 0.37), mat(C.blue)));
+  ream.position.set(-7.0, 0.1, 0.25);
+  item(ream, { tag: 'paper', shape: { box: [0.5, 0.15, 0.36] }, mass: 0.5 });
 
   // the printer
   const P = { x: -2.6, z: -3.7 };
@@ -170,8 +172,16 @@ export function build(ctx) {
   box(0.9, 0.85, 0.6, C.bodyDark, CG.x, 0.43, CG.z, { solid: true });
   box(0.9, 0.08, 0.5, C.steelDark, CG.x, 0.9, CG.z + 0.05, { rot: [0.35, 0, 0] });
   const button = cyl(0.16, 0.18, 0.12, C.red, CG.x, 1.0, CG.z + 0.08, { mat: glow(C.red, 0.5), segments: 12 });
-  tappable(button, 'button');
-  hitbox(1.0, 0.6, 0.8, CG.x, 1.0, CG.z, 'button');
+  // the rocket, standing in the cage beside the console
+  const rocket = new THREE.Group();
+  const rb = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 0.6, 8), mat(C.red));
+  const nose = new THREE.Mesh(new THREE.ConeGeometry(0.15, 0.3, 8), mat(C.yellow));
+  nose.position.y = 0.45;
+  const fin = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.18, 0.04), mat(C.blue));
+  fin.position.y = -0.22;
+  rocket.add(rb, nose, fin);
+  rocket.position.set(CG.x + 0.45, 0.46, CG.z + 0.25);
+  item(rocket, { tag: 'rocket', shape: { box: [0.32, 0.92, 0.32] }, mass: 0.6 });
   const cage = new THREE.Group();
   group.add(cage);
   const cw = 1.4, cd = 1.2, ch = 1.6;
@@ -190,8 +200,6 @@ export function build(ctx) {
   for (let i = 1; i < 6; i++) box(0.03, ch, 0.03, C.steelDark, (i * cw) / 6, ch / 2, 0, { parent: cageDoor });
   for (const y of [0.1, ch / 2, ch - 0.05]) box(cw, 0.04, 0.04, C.steelDark, cw / 2, y, 0, { parent: cageDoor });
   box(0.12, 0.16, 0.08, C.yellow, cw - 0.12, 0.85, 0.04, { parent: cageDoor });
-  tappable(cage, 'button');
-  tappable(cageDoor, 'button');
   const cageBody = ctx.solid(cw, ch, cd, CG.x, ch / 2, CG.z);
 
   // fireworks rack
@@ -204,6 +212,7 @@ export function build(ctx) {
     cyl(0.13, 0.13, 0.06, [C.yellow, C.cyan, C.green, C.magenta, C.red, C.white][i], tx, 1.17, tz, { segments: 8 });
     tubes.push([tx, 1.25, tz]);
   }
+  zone('launcher', [FW.x - 0.95, 0.3, FW.z - 0.65], [FW.x + 0.95, 3.0, FW.z + 0.65]);
 
   // antenna mast
   const AN = { x: 6.8, z: -4.3 };
@@ -212,19 +221,10 @@ export function build(ctx) {
   const beacon = sphere(0.1, C.red, AN.x, 5.45, AN.z, { mat: glow(C.red, 1), detail: 0, occlude: false });
 
   // --- behaviour ---------------------------------------------------------------------
-  let drawerT = null, printT = null, cageT = null, showT = null, nextRocket = 0, burstN = 0;
+  let printT = null, cageT = null, showT = null, nextRocket = 0, burstN = 0;
   const rockets = [];
 
   const effects = {
-    openDrawer() {
-      drawerT = 0;
-      const ream = new THREE.Group();
-      const r = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.15, 0.36), mat(C.white));
-      const band = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.16, 0.37), mat(C.blue));
-      ream.add(r, band);
-      ream.position.set(FC.x + 0.75, 1.5, FC.z);
-      item(ream, { tag: 'paper', shape: { box: [0.5, 0.15, 0.36] }, mass: 0.5, velocity: [1.2, 1.2, 0] });
-    },
     loadPaper() { paperLight.material = glow(C.green, 0.8); },
     loadInk() { inkLight.material = glow(C.green, 0.8); },
     print() { printT = 0; },
@@ -244,10 +244,6 @@ export function build(ctx) {
     fans.forEach((f, i) => { f.rotation.y = t * (9 + i); });
     beacon.visible = Math.floor(t * 1.5) % 2 === 0;
     padLights.forEach((l, i) => { l.visible = Math.floor(t * 4 - i) % 8 !== 0; });
-    if (drawerT !== null && drawerT < 1) {
-      drawerT = Math.min(1, drawerT + dt / 0.5);
-      drawer.position.x = FC.x + 0.5 * (1 - Math.pow(1 - drawerT, 3));
-    }
     if (printT !== null) {
       printT += dt;
       const busy = printT < 1.6;

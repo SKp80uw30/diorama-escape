@@ -9,7 +9,8 @@ npm install
 npm run build        # bundles to dist/ (add -- --minify for release)
 npm run serve        # http://127.0.0.1:5300/
 npm test             # every level built headlessly and played to the win from its own solution
-npm run qa           # real browser, real input: drags, throws, taps, and the camera gestures on every level
+npm run qa           # plays levels in a real browser with real pointer drags, saves qa/shots/
+node qa/touchfuzz.mjs # random multi-finger touch sequences; fails if a finger is left stuck
 node qa/levels.mjs   # renders every level's start and finished state to qa/shots/
 ```
 
@@ -17,42 +18,50 @@ node qa/levels.mjs   # renders every level's start and finished state to qa/shot
 
 ## Controls
 
-The same on every level (defined once in `src/game/view.js`, checked on every level by `qa/controls.mjs`): one finger on empty space orbits, two fingers drag to move the view and pinch to zoom (mouse: left-drag orbits, right-drag moves, wheel zooms), `R` resets the view. Press on a loose object to pick it up and drag to carry it: it hovers just above whatever is under your finger, so you can set things on desks, towers and pedestals. Release to drop it; release while moving to throw it (fast throws lob upward). Tap switches, wheels, drawers and buttons to use them.
+Drag empty space with one finger to turn the diorama, drag with two fingers to slide the view up, down, left or right, and pinch to zoom. With a mouse: left-drag turns, right-drag slides, the wheel zooms. `R` resets the view. Press on a loose object to pick it up, drag to carry it, release to drop it; release while moving to throw it.
+
+The navigation is approved as final: see `CLAUDE.md` before touching `input.js` or `grab.js`.
 
 ## Layout
 
 | Folder | What it is |
 |---|---|
 | `src/engine/` | Rendering modules from the [diorama kit](https://github.com/sloemo01/diorama) (MIT): hero camera, orbit, lighting, pixel post-pass. Only `palette.js` is changed. |
-| `src/game/` | The game layer: `physics.js` (cannon-es wrapper, per-level gravity), `grab.js` (pick up / carry / throw), `puzzle.js` (declarative rules + solver), `session.js` (one running level: routes events through the rules), `autoplay.js` (plays a level from its solution), `kit.js` (level building helpers, tappable switches), `particles.js`, `hud.js`, `save.js`, `registry.js`. |
+| `src/game/` | The game layer: `physics.js` (cannon-es wrapper, per-level gravity), `input.js` (the only finger and mouse handler: grab, turn, slide, zoom), `grab.js` (pick up / carry / throw), `puzzle.js` (declarative rules + solver), `session.js` (one running level: routes events through the rules), `autoplay.js` (plays a level from its solution), `kit.js` (level building helpers), `particles.js`, `hud.js`, `save.js`, `registry.js`. |
 | `src/levels/<id>/` | One folder per diorama: `puzzle.js` (rules as data), `scene.js` (geometry and behaviour), `level.js` (metadata). |
 
 ## Add a level
 
+Quickest: `node scripts/new-level.mjs <id> "<Title>"`, then see `.claude/skills/new-level/SKILL.md` for the full workflow (it is also a Claude Code skill). By hand:
+
 1. Create `src/levels/<id>/` with `puzzle.js`, `scene.js` and `level.js` (copy `tennis/`).
 2. Add it to `LEVELS` in `src/game/registry.js`.
-3. Run `npm test`: it builds the new level, solves its puzzle and plays the solution through the real scene, so a missing zone, switch, item or effect fails straight away.
+3. Run `npm test`: it builds the new level, solves its puzzle and plays the solution through the real scene, so a missing zone, item or effect fails straight away. There is no tapping: every action is carrying an item somewhere.
 
 A puzzle is a list of rules. Physical events (`an item entered a zone`) go in; state changes and named effects come out, and the scene reacts to the effects:
 
 ```js
 { on: 'enter', zone: 'hopper', tag: 'ball', do: [['fx', 'consume'], ['inc', 'balls']] },
 { when: { gte: ['balls', 3] },              do: [['set', 'fired'], ['fx', 'fire']] },
-{ on: 'tap', target: 'wheel', when: { not: 'power' }, do: [['say', "It won't budge."]] },
 ```
+
+Two effects are built in: `consume` removes the item that triggered the rule and `['fx', 'hint', 'text']` changes the hint line. Every other effect name calls `fx.<name>(payload, state, event)` in the level's scene. The kit also gives scenes `tween`, `cage`, `part`, `remove` and `burst` for moving props. Items can be `soft` (no bounce), have `lift` (they float, like balloons) and be kept `upright`.
 
 ## Levels
 
 For now every level can be picked from the **Worlds** menu (or with `?level=<id>` in the URL) without finishing the earlier ones. Set `ALL_LEVELS_OPEN = false` in `src/game/registry.js` to go back to unlocking each level by escaping the one before.
 
-
 1. **Centre Court**: load three balls into the ball machine; it knocks the gate key off the floodlight.
-2. **Underwater City**: drop the anchor on the giant clam, put its pearl in the beacon to power the city, turn the airlock wheel. Slow, floaty underwater physics.
-3. **Cloud Castles**: ring the bell tower with a pebble to wake the sleepy cloud, then set the red, yellow and blue crystals on their pedestals. Drop something into the gaps between islands and it falls away.
-4. **The Skyscraper**: paper from the filing cabinet, ink from behind the AC unit, the printer prints a keycard, the keycard opens the caged launch console, fireworks.
-5. **Hot Air Balloons**: move three sandbags to the ballast pile, put the gas canister (behind the shed) in the basket, untie the tether once the balloon inflates.
-6. **The Ancient Museum** (planned)
-7. **The Jungle Temple** (planned)
+2. **The Ancient Museum**: each relic belongs on the plinth of its colour. Two relics open the display case, the scarab opens the sarcophagus, and the sun disc inside opens the door.
+3. **The Jungle Temple**: the stone face needs both jade eyes. Light the torch at the campfire and burn the vines for one; put the carved stone on the pressure plate to drop the cage for the other.
+4. **The Pirate Ship**: the cannon needs two things, a ball and a powder keg. Its shot smashes the barrel on the islet and the key flies back on deck; the key opens the chest, and the wheel inside goes on the helm. Anything dropped overboard washes back.
+5. **The Birthday Party**: balloons float up to the ceiling when let go. Pop each one on the cactus to shake out a candle (one balloon is stuck under the table: tilt the view low), put three candles on the cake, and the big present opens with the door key.
+6. **Dinosaur Valley**: creatures go where the food is. Leaves at the tall tree move the long-neck off the egg it is standing over; three eggs in the nest bring the pterodactyl down, dropping her bone; the bone on the flat rock lures the T-rex away from the cave.
+7. **The Concert**: five fans queue outside, each in a colour, each wanting the ticket in that colour. One ticket is in plain sight, one is behind the booth, one is under a traffic cone, one shows up when the street lamp gets its bulb and one when the stage power is plugged in. A fan with a ticket walks in and dances; five dancing wins.
+8. **Underwater City**: drop the anchor on the giant clam, put its pearl in the beacon to power the city, and carry the fallen airlock wheel back to the hatch. Slow, floaty underwater physics.
+9. **Cloud Castles**: drop a pebble in the bell tower to wake the sleepy cloud, then set the red, yellow and blue crystals on their pedestals. Drop something into the gaps between islands and it falls away.
+10. **The Skyscraper**: paper from behind the filing cabinet, ink from behind the AC unit, the printer prints a keycard, the keycard opens the cage, the rocket goes in the launcher: fireworks.
+11. **Hot Air Balloons**: move three sandbags to the ballast pile, put the gas canister (behind the shed) in the basket, and once the balloon inflates pull up the tether stake and stow it in the basket.
 
 ## Credits
 

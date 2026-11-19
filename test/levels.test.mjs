@@ -24,7 +24,7 @@ for (const level of LEVELS.filter((l) => l.build)) {
   test(`${level.id}: can be played to the win`, () => {
     const said = [];
     let wins = 0;
-    const s = createSession(level, { lights: lights(), say: (t) => said.push(t), onWin: () => wins++ });
+    const s = createSession(level, { lights: lights(), say: (t) => said.push(t), onWin: () => wins++, strict: true });
     const r = autoplay(s);
     console.log(`  ${level.id}: ${r.log.join(' | ')}`);
     assert.ok(r.won, 'not won after the full solution');

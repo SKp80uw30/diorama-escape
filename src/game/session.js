@@ -9,7 +9,7 @@ import { createPhysics } from './physics.js';
 import { createKit } from './kit.js';
 import { createState, applyEvent } from './puzzle.js';
 
-export function createSession(level, { lights, say = () => {}, onWin = () => {} } = {}) {
+export function createSession(level, { lights, say = () => {}, onWin = () => {}, strict = false } = {}) {
   const group = new THREE.Group();
   const physics = createPhysics(level.physics);
   const kit = createKit({ group, physics, lights, say });
@@ -23,11 +23,12 @@ export function createSession(level, { lights, say = () => {}, onWin = () => {} 
     s.state = r.state;
     for (const fx of r.effects) {
       if (fx.name === 'consume') { if (event.item) physics.removeItem(event.item); }
-      else if (fx.name === 'say') say(fx.payload);
+      else if (fx.name === 'say' || fx.name === 'hint') say(fx.payload);
       else {
         const f = s.built.fx?.[fx.name];
+        if (!f && !strict) continue; // in the game a missing effect is skipped; tests run strict
         if (!f) throw new Error(`level ${level.id}: the puzzle asks for effect "${fx.name}" but the scene has none`);
-        f(fx.payload, s.state);
+        f(fx.payload, s.state, event);
       }
     }
     if (s.state.won && !wasWon) onWin();
@@ -37,6 +38,7 @@ export function createSession(level, { lights, say = () => {}, onWin = () => {} 
   s.tick = (dt) => {
     s.t += dt;
     physics.step(dt, s.emit);
+    kit.tick(dt);
     s.built.update?.(dt, s.t, s.state);
   };
 

@@ -3,7 +3,7 @@
  *   ruined arch (centre left) with an anchor lying on top
  *   giant clam (front)        -> 'clam' zone, opens when the anchor lands on it
  *   beacon (right)            -> 'beacon' zone, takes the pearl and powers the city
- *   airlock bunker (back right) with a tappable wheel ('wheel') = the exit
+ *   airlock bunker (back right): put the fallen wheel back ('hatch' zone) = the exit
  * Ambient: swaying kelp, circling fish, bubble vents.
  */
 const C = {
@@ -16,7 +16,7 @@ const C = {
 };
 
 export function build(ctx) {
-  const { THREE, box, cyl, cone, sphere, add, item, zone, mat, glow, group, tappable, hitbox, lights } = ctx;
+  const { THREE, box, cyl, cone, sphere, add, item, zone, mat, glow, group, lights } = ctx;
   lights.sun.color.set(0xb8ecf2); lights.sun.intensity = 2.5;
   lights.fill.color.set(0x54aeb6); lights.fill.intensity = 0.9;
   lights.hemi.color.set(0x80cecf); lights.hemi.groundColor.set(0x206577); lights.hemi.intensity = 1.0;
@@ -150,8 +150,15 @@ export function build(ctx) {
   box(0.72, 0.07, 0.07, C.gold, 0, 0, 0, { parent: wheel });
   box(0.07, 0.72, 0.07, C.gold, 0, 0, 0, { parent: wheel });
   cyl(0.08, 0.08, 0.12, C.gold, 0, 0, 0.04, { rot: [Math.PI / 2, 0, 0], parent: wheel });
-  tappable(wheel, 'wheel');
-  hitbox(1.2, 1.2, 0.5, H.x, 1.1, doorZ + 0.3, 'wheel');
+  wheel.visible = false; // fitted when the player brings the loose wheel back
+  zone('hatch', [H.x - 1.0, 0.2, doorZ], [H.x + 1.0, 3.2, doorZ + 1.1]);
+  // the loose wheel, lying in the sand in front of the columns
+  const loose = new THREE.Group();
+  loose.add(new THREE.Mesh(new THREE.TorusGeometry(0.36, 0.05, 5, 12), mat(C.gold)));
+  for (const [w, h] of [[0.72, 0.07], [0.07, 0.72]]) loose.add(new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.07), mat(C.gold)));
+  loose.position.set(-5.3, 0.09, 0.4);
+  loose.rotation.x = -Math.PI / 2;
+  item(loose, { tag: 'wheel', shape: { box: [0.8, 0.8, 0.14] }, mass: 0.8 });
   const doorLamps = [-0.5, 0.5].map((dx) => box(0.2, 0.14, 0.1, C.red, H.x + dx, 2.1, doorZ + 0.05, { mat: glow(C.red, 0.6), shadow: false }));
 
   // --- kelp, vents, fish ------------------------------------------------------------
@@ -210,6 +217,10 @@ export function build(ctx) {
       domeRing.material = glow(C.light, 0.8);
       for (const l of doorLamps) l.material = glow(C.light, 0.9);
       fx.burst([B.x, 2.2, B.z], { count: 50, speed: 2.4, colors: [0xfff3a8, 0xffffff], life: 1.3, gravity: 0, drag: 1.4 });
+    },
+    fitWheel() {
+      wheel.visible = true;
+      fx.burst([H.x, 1.1, doorZ + 0.3], { count: 16, speed: 1.2, colors: [0xe3c832, 0xffffff], life: 0.8, gravity: 0, drag: 2 });
     },
     openHatch() {
       hatchT = 0;

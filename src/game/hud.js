@@ -15,6 +15,8 @@ const css = `
   #de-win p { margin: 0 0 10px; }
 `;
 
+export const BUILD = 'build 9';
+
 export function createHud({ levels, isOpen, onPick, onRestart }) {
   const style = document.createElement('style');
   style.textContent = css;
@@ -54,6 +56,8 @@ export function createHud({ levels, isOpen, onPick, onRestart }) {
       if (l.id === currentId) b.style.fontWeight = '700';
       b.onclick = () => { list.hidden = true; onPick(l.id); };
     }
+    const tag = el('div', null, list, BUILD);   // so a tester can tell which version is on screen
+    tag.style.cssText = 'color:#a89c88;font-size:11px;padding:4px 12px 2px';
   }
 
   return {
