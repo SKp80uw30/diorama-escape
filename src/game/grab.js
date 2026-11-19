@@ -111,8 +111,20 @@ export function createGrab({ canvas, camera, physics, orbit, bounds, lift = 1.3,
     b.angularVelocity.scale(0.9, b.angularVelocity);
   }
 
+  /** Put down whatever is held, without throwing it (a second finger means "move the view"). */
+  function cancel() {
+    if (!held) return;
+    held.body.velocity.setZero();
+    held.held = false;
+    held = null;
+    pointerId = null;
+    orbit.controls.enabled = true;
+    canvas.style.cursor = '';
+  }
+
   return {
     update,
+    cancel,
     setOccluders(list) { occluders = list; },
     get held() { return held; },
     dispose() {

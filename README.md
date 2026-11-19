@@ -9,7 +9,7 @@ npm install
 npm run build        # bundles to dist/ (add -- --minify for release)
 npm run serve        # http://127.0.0.1:5300/
 npm test             # every level built headlessly and played to the win from its own solution
-npm run qa           # real browser, real pointer: drags, throws, taps; saves qa/shots/
+npm run qa           # real browser, real input: drags, throws, taps, and the camera gestures on every level
 node qa/levels.mjs   # renders every level's start and finished state to qa/shots/
 ```
 
@@ -17,7 +17,7 @@ node qa/levels.mjs   # renders every level's start and finished state to qa/shot
 
 ## Controls
 
-Drag empty space to orbit, pinch or scroll to zoom, `R` resets the view. Press on a loose object to pick it up and drag to carry it: it hovers just above whatever is under your finger, so you can set things on desks, towers and pedestals. Release to drop it; release while moving to throw it (fast throws lob upward). Tap switches, wheels, drawers and buttons to use them.
+The same on every level (defined once in `src/game/view.js`, checked on every level by `qa/controls.mjs`): one finger on empty space orbits, two fingers drag to move the view and pinch to zoom (mouse: left-drag orbits, right-drag moves, wheel zooms), `R` resets the view. Press on a loose object to pick it up and drag to carry it: it hovers just above whatever is under your finger, so you can set things on desks, towers and pedestals. Release to drop it; release while moving to throw it (fast throws lob upward). Tap switches, wheels, drawers and buttons to use them.
 
 ## Layout
 

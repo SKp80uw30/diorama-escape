@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { PixelPost } from './engine/post.js';
 import { CAMERA, createCamera, updateCamera } from './engine/camera.js';
-import { createDioramaOrbit } from './engine/orbit.js';
+import { createView } from './game/view.js';
 import { createLighting } from './engine/lighting.js';
 import { createGrab } from './game/grab.js';
 import { createSession } from './game/session.js';
@@ -78,7 +78,7 @@ function load(id) {
   if (!level?.build) return;
   if (current) {
     current.grab.dispose();
-    current.orbit.dispose();
+    current.view.dispose();
     scene.remove(current.group);
     current.group.traverse((o) => { o.geometry?.dispose(); });
   }
@@ -89,16 +89,21 @@ function load(id) {
   const points = fitPoints(level);
   updateCamera(camera, size(), points);
   const d = camera.userData.distance;
-  const orbit = createDioramaOrbit(camera, canvas, {
-    target: CAMERA.target, minDistance: d * 0.4, maxDistance: d * 1.5, maxPolarAngle: Math.PI / 2 - 0.06, onSelect: tapAt,
-  });
   const { hx, hz } = level.slab;
-  const grab = createGrab({
+  let grab = null;
+  // the same camera controls for every level: see game/view.js
+  const view = createView({
+    camera, canvas, target: CAMERA.target, distance: d,
+    bounds: { minX: -hx, maxX: hx, minY: -0.5, maxY: (level.tall ?? 4) * 0.8, minZ: -hz, maxZ: hz },
+    onSelect: tapAt, onTwoFingers: () => grab?.cancel(),
+  });
+  const orbit = view.orbit;
+  grab = createGrab({
     canvas, camera, physics: session.physics, orbit,
     bounds: { minX: -hx + 0.3, maxX: hx - 0.3, minZ: -hz + 0.3, maxZ: hz - 0.3 },
   });
   grab.setOccluders(session.kit.occluders);
-  current = Object.assign(session, { orbit, grab, points });
+  current = Object.assign(session, { view, orbit, grab, points });
   hud.setProgress(progress, level.id);
 }
 
