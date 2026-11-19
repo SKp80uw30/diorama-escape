@@ -43,6 +43,9 @@ A puzzle is a list of rules. Physical events (`an item entered a zone`) go in; s
 
 ## Levels
 
+For now every level can be picked from the **Worlds** menu (or with `?level=<id>` in the URL) without finishing the earlier ones. Set `ALL_LEVELS_OPEN = false` in `src/game/registry.js` to go back to unlocking each level by escaping the one before.
+
+
 1. **Centre Court**: load three balls into the ball machine; it knocks the gate key off the floodlight.
 2. **Underwater City**: drop the anchor on the giant clam, put its pearl in the beacon to power the city, turn the airlock wheel. Slow, floaty underwater physics.
 3. **Cloud Castles**: ring the bell tower with a pebble to wake the sleepy cloud, then set the red, yellow and blue crystals on their pedestals. Drop something into the gaps between islands and it falls away.

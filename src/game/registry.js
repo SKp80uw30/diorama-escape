@@ -22,5 +22,14 @@ export const LEVELS = [
   { id: 'jungle', title: 'The Jungle Temple' },
 ];
 
+/**
+ * While true, every built level can be picked from the Worlds menu without
+ * finishing the ones before it. Set to false to bring back unlock-by-escaping.
+ */
+export const ALL_LEVELS_OPEN = true;
+
+/** Can this level be played right now? */
+export const isOpen = (level, progress) => !!level?.build && (ALL_LEVELS_OPEN || progress.unlocked.includes(level.id));
+
 export const levelById = (id) => LEVELS.find((l) => l.id === id);
 export const nextOf = (id) => LEVELS[LEVELS.findIndex((l) => l.id === id) + 1];

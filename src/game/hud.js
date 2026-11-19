@@ -15,7 +15,7 @@ const css = `
   #de-win p { margin: 0 0 10px; }
 `;
 
-export function createHud({ levels, onPick, onRestart }) {
+export function createHud({ levels, isOpen, onPick, onRestart }) {
   const style = document.createElement('style');
   style.textContent = css;
   document.head.append(style);
@@ -47,7 +47,7 @@ export function createHud({ levels, onPick, onRestart }) {
   function setProgress(progress, currentId) {
     list.replaceChildren();
     for (const l of levels) {
-      const open = progress.unlocked.includes(l.id) && l.build;
+      const open = isOpen(l, progress);
       const mark = progress.solved.includes(l.id) ? '✓ ' : open ? '• ' : '  ';
       const b = el('button', null, list, `${mark}${l.title}${l.build ? '' : ' (soon)'}`);
       b.disabled = !open;

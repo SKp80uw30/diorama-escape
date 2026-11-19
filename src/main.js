@@ -9,7 +9,7 @@ import { autoplay } from './game/autoplay.js';
 import { solve } from './game/puzzle.js';
 import { loadProgress, markSolved } from './game/save.js';
 import { createHud } from './game/hud.js';
-import { LEVELS, levelById, nextOf } from './game/registry.js';
+import { LEVELS, levelById, nextOf, isOpen } from './game/registry.js';
 
 const canvas = document.getElementById('stage');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, alpha: true });
@@ -37,7 +37,7 @@ const post = new PixelPost(renderer, 1600);
 const camera = createCamera();
 
 const progress = loadProgress(LEVELS[0].id);
-const hud = createHud({ levels: LEVELS, onPick: (id) => load(id), onRestart: () => load(current.level.id) });
+const hud = createHud({ levels: LEVELS, isOpen, onPick: (id) => load(id), onRestart: () => load(current.level.id) });
 
 /** Everything belonging to the level on screen; replaced wholesale on load(). */
 let current = null;
@@ -135,7 +135,7 @@ window.addEventListener('resize', () => {
 });
 
 const wanted = new URLSearchParams(location.search).get('level');
-load(progress.unlocked.includes(wanted) ? wanted : progress.unlocked.filter((id) => levelById(id)?.build).at(-1) || LEVELS[0].id);
+load(isOpen(levelById(wanted), progress) ? wanted : progress.unlocked.filter((id) => levelById(id)?.build).at(-1) || LEVELS[0].id);
 post.render(scene, camera);
 requestAnimationFrame(frame);
 
